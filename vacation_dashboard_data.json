@@ -1,0 +1,176 @@
+{
+  "employees": [
+    {
+      "id": 1,
+      "name": "Олексій Коваленко",
+      "role": "employee",
+      "department": "IT",
+      "position": "Senior Developer",
+      "manager_id": 3,
+      "total_vacation": 24,
+      "used_vacation": 8
+    },
+    {
+      "id": 2,
+      "name": "Марина Петренко",
+      "role": "employee",
+      "department": "Marketing",
+      "position": "Marketing Specialist",
+      "manager_id": 4,
+      "total_vacation": 22,
+      "used_vacation": 5
+    },
+    {
+      "id": 3,
+      "name": "Дмитро Іваненко",
+      "role": "manager",
+      "department": "IT",
+      "position": "IT Manager",
+      "manager_id": 5,
+      "total_vacation": 26,
+      "used_vacation": 12
+    },
+    {
+      "id": 4,
+      "name": "Анна Сидоренко",
+      "role": "manager",
+      "department": "Marketing",
+      "position": "Marketing Manager",
+      "manager_id": 5,
+      "total_vacation": 25,
+      "used_vacation": 10
+    },
+    {
+      "id": 5,
+      "name": "Володимир Шевченко",
+      "role": "hr",
+      "department": "HR",
+      "position": "HR Director",
+      "manager_id": null,
+      "is_hr_manager": true,
+      "total_vacation": 28,
+      "used_vacation": 14
+    },
+    {
+      "id": 6,
+      "name": "Світлана Мельник",
+      "role": "employee",
+      "department": "Finance",
+      "position": "Accountant",
+      "manager_id": 7,
+      "total_vacation": 20,
+      "used_vacation": 6
+    },
+    {
+      "id": 7,
+      "name": "Ігор Лисенко",
+      "role": "manager",
+      "department": "Finance",
+      "position": "Finance Manager",
+      "manager_id": 5,
+      "total_vacation": 24,
+      "used_vacation": 9
+    },
+    {
+      "id": 8,
+      "name": "Тетяна Бондаренко",
+      "role": "employee",
+      "department": "IT",
+      "position": "Junior Developer",
+      "manager_id": 3,
+      "total_vacation": 20,
+      "used_vacation": 4
+    }
+  ],
+  "vacation_requests": [
+    {
+      "id": 1,
+      "employee_id": 1,
+      "start_date": "2025-10-15",
+      "end_date": "2025-10-19",
+      "days": 5,
+      "type": "Щорічна відпустка",
+      "status": "Затверджено",
+      "manager_id": 3
+    },
+    {
+      "id": 2,
+      "employee_id": 2,
+      "start_date": "2025-11-10",
+      "end_date": "2025-11-12",
+      "days": 3,
+      "type": "Особиста відпустка",
+      "status": "В очікуванні",
+      "manager_id": 4
+    },
+    {
+      "id": 3,
+      "employee_id": 3,
+      "start_date": "2025-12-20",
+      "end_date": "2025-12-30",
+      "days": 9,
+      "type": "Щорічна відпустка",
+      "status": "Затверджено",
+      "manager_id": 5
+    },
+    {
+      "id": 4,
+      "employee_id": 6,
+      "start_date": "2025-10-25",
+      "end_date": "2025-10-27",
+      "days": 3,
+      "type": "Лікарняний",
+      "status": "Затверджено",
+      "manager_id": 7
+    },
+    {
+      "id": 5,
+      "employee_id": 8,
+      "start_date": "2025-11-15",
+      "end_date": "2025-11-22",
+      "days": 6,
+      "type": "Щорічна відпустка",
+      "status": "В очікуванні",
+      "manager_id": 3
+    },
+    {
+      "id": 6,
+      "employee_id": 4,
+      "start_date": "2025-11-05",
+      "end_date": "2025-11-08",
+      "days": 4,
+      "type": "Особиста відпустка",
+      "status": "Відхилено",
+      "manager_id": 5
+    }
+  ],
+  "vacation_types": [
+    {
+      "id": 1,
+      "name": "Щорічна відпустка",
+      "color": "#4CAF50"
+    },
+    {
+      "id": 2,
+      "name": "Лікарняний",
+      "color": "#FF9800"
+    },
+    {
+      "id": 3,
+      "name": "Особиста відпустка",
+      "color": "#2196F3"
+    },
+    {
+      "id": 4,
+      "name": "Декретна відпустка",
+      "color": "#9C27B0"
+    }
+  ],
+  "departments": [
+    "IT",
+    "Marketing",
+    "Finance",
+    "HR",
+    "Sales"
+  ]
+}
