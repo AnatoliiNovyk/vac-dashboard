@@ -1,5 +1,0 @@
-Error: connect ECONNREFUSED 127.0.0.1:5432
-    at /home/user/vacation-dashboard/node_modules/pg-pool/index.js:45:11
-    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
-    at async Object.findByIpn (/home/user/vacation-dashboard/users.js:13:20)
-    at async /home/user/vacation-dashboard/server.js:59:22

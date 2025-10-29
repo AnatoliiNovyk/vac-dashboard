@@ -1,47 +1,239 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="uk">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Панель управления отпусками</title>
+    <title>Vacation Dashboard - Система управління періодами відпусток</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <h1>Панель управления отпусками</h1>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="header-title">
+                    <i class="fas fa-calendar-alt"></i>
+                    Vacation Dashboard
+                </h1>
+                <div class="role-selector">
+                    <label for="userRole" class="form-label">Оберіть роль:</label>
+                    <select id="userRole" class="form-control">
+                        <option value="">-- Оберіть роль --</option>
+                        <option value="hr">HR</option>
+                        <option value="manager">Менеджер</option>
+                        <option value="employee">Співробітник</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
 
-    <div id="error-container" style="color: red; border: 1px solid red; padding: 10px; margin-bottom: 10px; display: none;"></div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="welcome-screen">
+                <div class="welcome-card">
+                    <i class="fas fa-users welcome-icon"></i>
+                    <h2>Ласкаво просимо до системи управління періодами відпусток</h2>
+                    <p>Оберіть вашу роль для доступу до відповідного дашборду</p>
+                </div>
+            </div>
 
-    <div id="login-form">
-        <h2>Вход</h2>
-        <form>
-            <label for="ipn">IPN:</label>
-            <input type="text" id="ipn" name="ipn" required>
-            <button type="submit">Войти</button>
-        </form>
+            <!-- Dashboard Container -->
+            <div id="dashboard-container" class="dashboard-container hidden">
+                <!-- User Info -->
+                <div class="user-info-bar">
+                    <div class="user-info">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="current-user-name">Користувач</span>
+                        <span id="current-user-role" class="user-role-badge">Роль</span>
+                    </div>
+                    <div class="user-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Загалом днів:</span>
+                            <span id="total-days" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Використано:</span>
+                            <span id="used-days" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Залишилось:</span>
+                            <span id="remaining-days" class="stat-value">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="tabs-nav" id="tabs-nav">
+                    <!-- Tabs will be populated dynamically -->
+                </nav>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Filters -->
+                    <div class="filters-section" id="filters-section">
+                        <div class="filters-grid">
+                            <div class="filter-group">
+                                <label class="form-label">Департамент:</label>
+                                <select id="department-filter" class="form-control">
+                                    <option value="">Всі департаменти</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="form-label">Тип періоду відпустки:</label>
+                                <select id="type-filter" class="form-control">
+                                    <option value="">Всі типи</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <button id="clear-filters" class="btn btn--secondary">
+                                    <i class="fas fa-times"></i>
+                                    Очистити фільтри
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Content Area -->
+                    <div class="content-area">
+                        <!-- Calendar View -->
+                        <div class="calendar-section">
+                            <div class="calendar-header">
+                                <h3>Календар періодів відпусток</h3>
+                                <div class="calendar-controls">
+                                    <button id="prev-month" class="btn btn--outline btn--sm">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <span id="current-month-year">Жовтень 2025</span>
+                                    <button id="next-month" class="btn btn--outline btn--sm">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="calendar-grid" id="calendar-grid">
+                                <!-- Calendar will be populated dynamically -->
+                            </div>
+                            <div class="calendar-legend">
+                                <div class="legend-item">
+                                    <span class="legend-color" style="background-color: #4CAF50;"></span>
+                                    <span>Щорічний період відпустки</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-color" style="background-color: #FF9800;"></span>
+                                    <span>Лікарняний</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-color" style="background-color: #2196F3;"></span>
+                                    <span>Особистий період відпустки</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-color" style="background-color: #9C27B0;"></span>
+                                    <span>Декретний період відпустки</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table View -->
+                        <div class="table-section">
+                            <div class="table-header">
+                                <h3>Список періодів відпусток</h3>
+                                <button id="add-vacation-btn" class="btn btn--primary hidden">
+                                    <i class="fas fa-plus"></i>
+                                    Запланувати період відпустки
+                                </button>
+                            </div>
+                            <div class="table-container">
+                                <table id="vacations-table" class="vacations-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Співробітник</th>
+                                            <th>Департамент</th>
+                                            <th>Статус співробітника</th>
+                                            <th>Початок</th>
+                                            <th>Кінець</th>
+                                            <th>Днів</th>
+                                            <th>Тип</th>
+                                            <th class="actions-column">Дії</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="vacations-table-body">
+                                        <!-- Table rows will be populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for vacation details -->
+    <div id="vacation-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Деталі періоду відпустки</h3>
+                <button class="modal-close" id="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Modal content will be populated dynamically -->
+            </div>
+            <div class="modal-footer" id="modal-footer">
+                <!-- Modal footer will be populated dynamically -->
+            </div>
+        </div>
     </div>
 
-    <div id="main-content" style="display:none;">
-        <button id="logout-btn">Выйти</button>
-
-        <div id="employee-dashboard" style="display:none;">
-            <!-- Employee's personal info will be displayed here -->
-        </div>
-
-        <div id="manager-dashboard" style="display:none;">
-            <h2>Панель менеджера</h2>
-            <ul id="manager-employee-list">
-                <!-- Manager's employee list will be populated here -->
-            </ul>
-        </div>
-
-        <div id="hr-dashboard" style="display:none;">
-            <h2>Панель HR</h2>
-            <ul id="hr-employee-list">
-                <!-- HR's employee list will be populated here -->
-            </ul>
+    <!-- Modal for new/edit vacation -->
+    <div id="vacation-form-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="vacation-form-title">Запланувати період відпустки</h3>
+                <button class="modal-close" id="vacation-form-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="vacation-form">
+                <input type="hidden" id="vacation-id-input" />
+                <div class="modal-body">
+                    <div class="form-group" id="employee-select-group">
+                        <label for="employee-select" class="form-label">Співробітник</label>
+                        <select id="employee-select" class="form-control" required>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="vacation-type-select" class="form-label">Тип періоду відпустки</label>
+                        <select id="vacation-type-select" class="form-control" required>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="start-date-input" class="form-label">Дата початку</label>
+                        <input type="date" id="start-date-input" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="end-date-input" class="form-label">Дата закінчення</label>
+                        <input type="date" id="end-date-input" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vacation-days-input" class="form-label">Кількість днів</label>
+                        <input type="text" id="vacation-days-input" class="form-control" readonly>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="cancel-vacation-form-btn" class="btn btn--secondary">Скасувати</button>
+                    <button type="submit" class="btn btn--primary">Зберегти</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
