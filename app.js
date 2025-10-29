@@ -15,16 +15,10 @@ const defaultAppData = {
     {"id": 8, "name": "Тетяна Бондаренко", "role": "employee", "department": "IT", "position": "Junior Developer", "manager_id": 3, "total_vacation_days": 20, "used_vacation_days": 4}
   ],
   vacation_periods: [
-    {"id": 1, "employee_id": 1, "start_date": "2025-10-15", "end_date": "2025-10-19", "days": 5, "type": "Щорічний період відпустки", "manager_id": 3},
-    {"id": 3, "employee_id": 3, "start_date": "2025-12-20", "end_date": "2025-12-30", "days": 9, "type": "Щорічний період відпустки", "manager_id": 5},
-    {"id": 4, "employee_id": 6, "start_date": "2025-10-25", "end_date": "2025-10-27", "days": 3, "type": "Лікарняний", "manager_id": 7},
-    {"id": 5, "employee_id": 8, "start_date": "2025-11-15", "end_date": "2025-11-22", "days": 6, "type": "Щорічний період відпустки", "manager_id": 3}
-  ],
-  vacation_period_types: [
-    {"id": 1, "name": "Щорічний період відпустки", "color": "#4CAF50"},
-    {"id": 2, "name": "Лікарняний", "color": "#FF9800"},
-    {"id": 3, "name": "Особистий період відпустки", "color": "#2196F3"},
-    {"id": 4, "name": "Декретний період відпустки", "color": "#9C27B0"}
+    {"id": 1, "employee_id": 1, "start_date": "2025-10-15", "end_date": "2025-10-19", "days": 5, "manager_id": 3},
+    {"id": 3, "employee_id": 3, "start_date": "2025-12-20", "end_date": "2025-12-30", "days": 9, "manager_id": 5},
+    {"id": 4, "employee_id": 6, "start_date": "2025-10-25", "end_date": "2025-10-27", "days": 3, "manager_id": 7},
+    {"id": 5, "employee_id": 8, "start_date": "2025-11-15", "end_date": "2025-11-22", "days": 6, "manager_id": 3}
   ],
   departments: ["IT", "Marketing", "Finance", "HR", "Sales"]
 };
@@ -49,7 +43,6 @@ const elements = {
   remainingDays: document.getElementById('remaining-days'),
   filtersSection: document.getElementById('filters-section'),
   departmentFilter: document.getElementById('department-filter'),
-  typeFilter: document.getElementById('type-filter'),
   clearFilters: document.getElementById('clear-filters'),
   calendarGrid: document.getElementById('calendar-grid'),
   currentMonthYear: document.getElementById('current-month-year'),
@@ -63,7 +56,6 @@ const elements = {
   vacationPeriodForm: document.getElementById('vacation-form'),
   vacationPeriodFormTitle: document.getElementById('vacation-form-title'),
   vacationPeriodIdInput: document.getElementById('vacation-id-input'),
-  vacationPeriodTypeSelect: document.getElementById('vacation-type-select'),
   startDateInput: document.getElementById('start-date-input'),
   endDateInput: document.getElementById('end-date-input'),
   vacationPeriodDaysInput: document.getElementById('vacation-days-input'),
@@ -102,7 +94,6 @@ function initializeApp() {
   elements.nextMonth.addEventListener('click', () => changeMonth(1));
   
   elements.departmentFilter.addEventListener('change', applyFilters);
-  elements.typeFilter.addEventListener('change', applyFilters);
   
   elements.addVacationPeriodBtn.addEventListener('click', () => openVacationPeriodForm());
   elements.vacationPeriodFormModalClose.addEventListener('click', () => closeModal(elements.vacationPeriodFormModal));
@@ -117,17 +108,10 @@ function initializeApp() {
 
 function populateFilterDropdowns() {
   elements.departmentFilter.innerHTML = '<option value="">Всі департаменти</option>';
-  elements.typeFilter.innerHTML = '<option value="">Всі типи</option>';
-  elements.vacationPeriodTypeSelect.innerHTML = '';
   elements.employeeSelect.innerHTML = '';
 
   appData.departments.forEach(dept => {
     elements.departmentFilter.appendChild(new Option(dept, dept));
-  });
-  
-  appData.vacation_period_types.forEach(type => {
-    elements.typeFilter.appendChild(new Option(type.name, type.name));
-    elements.vacationPeriodTypeSelect.appendChild(new Option(type.name, type.name));
   });
   
   appData.employees.forEach(emp => {
@@ -259,7 +243,6 @@ function applyFilters() {
   let vacationPeriods = getVacationPeriodsForCurrentTab();
   
   const deptFilter = elements.departmentFilter.value;
-  const typeFilter = elements.typeFilter.value;
   
   if (deptFilter) {
     vacationPeriods = vacationPeriods.filter(v => {
@@ -268,8 +251,6 @@ function applyFilters() {
     });
   }
   
-  if (typeFilter) vacationPeriods = vacationPeriods.filter(v => v.type === typeFilter);
-  
   filteredVacationPeriods = vacationPeriods;
   updateTable();
   updateCalendar();
@@ -277,7 +258,6 @@ function applyFilters() {
 
 function clearFilters() {
   elements.departmentFilter.value = '';
-  elements.typeFilter.value = '';
   applyFilters();
 }
 
@@ -306,7 +286,7 @@ function updateTable() {
   elements.vacationsTableBody.innerHTML = '';
   
   if (filteredVacationPeriods.length === 0) {
-    elements.vacationsTableBody.innerHTML = `<tr><td colspan="8" class="empty-state"><i class="fas fa-calendar-times"></i><p>Немає періодів відпусток для відображення</p></td></tr>`;
+    elements.vacationsTableBody.innerHTML = `<tr><td colspan="7" class="empty-state"><i class="fas fa-calendar-times"></i><p>Немає періодів відпусток для відображення</p></td></tr>`;
     return;
   }
   
@@ -324,7 +304,6 @@ function updateTable() {
       <td>${formatDate(vacationPeriod.start_date)}</td>
       <td>${formatDate(vacationPeriod.end_date)}</td>
       <td>${vacationPeriod.days}</td>
-      <td><span class="vacation-type vacation-type--${getVacationPeriodTypeClass(vacationPeriod.type)}">${vacationPeriod.type}</span></td>
       <td class="actions-column">
         <div class="action-buttons">
           ${canManage ? `
@@ -336,11 +315,6 @@ function updateTable() {
     `;
     elements.vacationsTableBody.appendChild(row);
   });
-}
-
-function getVacationPeriodTypeClass(type) {
-  const typeMap = { 'Щорічний період відпустки': 'annual', 'Лікарняний': 'sick', 'Особистий період відпустки': 'personal', 'Декретний період відпустки': 'maternity' };
-  return typeMap[type] || 'annual';
 }
 
 function formatDate(dateString) {
@@ -388,9 +362,8 @@ function updateCalendar() {
         
         if (dayVacationPeriods.length > 0) {
             dayElement.classList.add('calendar-day--vacation');
-            const vacationPeriodType = appData.vacation_period_types.find(type => type.name === dayVacationPeriods[0].type);
-            if (vacationPeriodType) dayElement.style.setProperty('--vacation-color', vacationPeriodType.color);
-            dayElement.title = dayVacationPeriods.map(v => `${appData.employees.find(e => e.id === v.employee_id)?.name || 'Unknown'}: ${v.type}`).join('\n');
+            dayElement.style.setProperty('--vacation-color', '#4CAF50'); // Default color
+            dayElement.title = dayVacationPeriods.map(v => `${appData.employees.find(e => e.id === v.employee_id)?.name || 'Unknown'}`).join('\n');
         }
         
         elements.calendarGrid.appendChild(dayElement);
@@ -415,7 +388,6 @@ function openVacationPeriodForm(vacationPeriodId = null) {
       elements.vacationPeriodFormTitle.textContent = 'Редагувати період відпустки';
       elements.vacationPeriodIdInput.value = vacationPeriod.id;
       elements.employeeSelect.value = vacationPeriod.employee_id;
-      elements.vacationPeriodTypeSelect.value = vacationPeriod.type;
       elements.startDateInput.value = vacationPeriod.start_date;
       elements.endDateInput.value = vacationPeriod.end_date;
       calculateVacationPeriodDays();
@@ -467,7 +439,6 @@ function handleVacationPeriodFormSubmit(event) {
     }
 
     const vacationPeriodData = {
-        type: elements.vacationPeriodTypeSelect.value,
         start_date: elements.startDateInput.value,
         end_date: elements.endDateInput.value,
         days: days,

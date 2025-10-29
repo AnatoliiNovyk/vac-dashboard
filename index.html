@@ -83,12 +83,6 @@
                                 </select>
                             </div>
                             <div class="filter-group">
-                                <label class="form-label">Тип періоду відпустки:</label>
-                                <select id="type-filter" class="form-control">
-                                    <option value="">Всі типи</option>
-                                </select>
-                            </div>
-                            <div class="filter-group">
                                 <button id="clear-filters" class="btn btn--secondary">
                                     <i class="fas fa-times"></i>
                                     Очистити фільтри
@@ -116,24 +110,6 @@
                             <div class="calendar-grid" id="calendar-grid">
                                 <!-- Calendar will be populated dynamically -->
                             </div>
-                            <div class="calendar-legend">
-                                <div class="legend-item">
-                                    <span class="legend-color" style="background-color: #4CAF50;"></span>
-                                    <span>Щорічний період відпустки</span>
-                                </div>
-                                <div class="legend-item">
-                                    <span class="legend-color" style="background-color: #FF9800;"></span>
-                                    <span>Лікарняний</span>
-                                </div>
-                                <div class="legend-item">
-                                    <span class="legend-color" style="background-color: #2196F3;"></span>
-                                    <span>Особистий період відпустки</span>
-                                </div>
-                                <div class="legend-item">
-                                    <span class="legend-color" style="background-color: #9C27B0;"></span>
-                                    <span>Декретний період відпустки</span>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Table View -->
@@ -155,7 +131,6 @@
                                             <th>Початок</th>
                                             <th>Кінець</th>
                                             <th>Днів</th>
-                                            <th>Тип</th>
                                             <th class="actions-column">Дії</th>
                                         </tr>
                                     </thead>
@@ -170,24 +145,6 @@
             </div>
         </div>
     </main>
-
-    <!-- Modal for vacation details -->
-    <div id="vacation-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Деталі періоду відпустки</h3>
-                <button class="modal-close" id="modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body" id="modal-body">
-                <!-- Modal content will be populated dynamically -->
-            </div>
-            <div class="modal-footer" id="modal-footer">
-                <!-- Modal footer will be populated dynamically -->
-            </div>
-        </div>
-    </div>
 
     <!-- Modal for new/edit vacation -->
     <div id="vacation-form-modal" class="modal hidden">
@@ -204,12 +161,6 @@
                     <div class="form-group" id="employee-select-group">
                         <label for="employee-select" class="form-label">Співробітник</label>
                         <select id="employee-select" class="form-control" required>
-                            <!-- Options will be populated dynamically -->
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="vacation-type-select" class="form-label">Тип періоду відпустки</label>
-                        <select id="vacation-type-select" class="form-control" required>
                             <!-- Options will be populated dynamically -->
                         </select>
                     </div>
