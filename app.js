@@ -49,6 +49,7 @@ const elements = {
   prevMonth: document.getElementById('prev-month'),
   nextMonth: document.getElementById('next-month'),
   vacationsTable: document.getElementById('vacations-table'),
+  vacationsTableHeader: document.querySelector('#vacations-table thead'),
   vacationsTableBody: document.getElementById('vacations-table-body'),
   addVacationPeriodBtn: document.getElementById('add-vacation-btn'),
   vacationPeriodFormModal: document.getElementById('vacation-form-modal'),
@@ -283,39 +284,102 @@ function getEmployeeStatus(employeeId) {
 }
 
 function updateTable() {
+  const isMyView = currentTab === 'my-view';
+  const isManagerView = currentTab === 'hr-manager' || currentTab === 'manager-team';
+  
+  // Update table headers
+  if (isMyView) {
+    elements.vacationsTableHeader.innerHTML = `
+      <tr>
+        <th>#</th>
+        <th>Статус співробітника</th>
+        <th>Початок</th>
+        <th>Кінець</th>
+        <th>Днів</th>
+      </tr>
+    `;
+  } else if (isManagerView) {
+    elements.vacationsTableHeader.innerHTML = `
+      <tr>
+        <th>#</th>
+        <th>Співробітник</th>
+        <th>Статус співробітника</th>
+        <th>Початок</th>
+        <th>Кінець</th>
+        <th>Днів</th>
+      </tr>
+    `;
+  } else {
+    elements.vacationsTableHeader.innerHTML = `
+      <tr>
+        <th>#</th>
+        <th>Співробітник</th>
+        <th>Департамент</th>
+        <th>Статус співробітника</th>
+        <th>Початок</th>
+        <th>Кінець</th>
+        <th>Днів</th>
+        <th class="actions-column">Дії</th>
+      </tr>
+    `;
+  }
+  
+  // Update table body
   elements.vacationsTableBody.innerHTML = '';
   
   if (filteredVacationPeriods.length === 0) {
-    elements.vacationsTableBody.innerHTML = `<tr><td colspan="7" class="empty-state"><i class="fas fa-calendar-times"></i><p>Немає періодів відпусток для відображення</p></td></tr>`;
+    const colspan = isMyView ? 5 : isManagerView ? 6 : 8;
+    elements.vacationsTableBody.innerHTML = `<tr><td colspan="${colspan}" class="empty-state"><i class="fas fa-calendar-times"></i><p>Немає періодів відпусток для відображення</p></td></tr>`;
     return;
   }
   
-  filteredVacationPeriods.forEach(vacationPeriod => {
+  filteredVacationPeriods.forEach((vacationPeriod, index) => {
     const employee = appData.employees.find(emp => emp.id === vacationPeriod.employee_id);
     const employeeStatus = getEmployeeStatus(vacationPeriod.employee_id);
     const row = document.createElement('tr');
     
     const canManage = currentRole === 'hr';
     
-    row.innerHTML = `
-      <td>${employee ? employee.name : 'Невідомо'}</td>
-      <td>${employee ? employee.department : 'Невідомо'}</td>
-      <td><span class="employee-status employee-status--${employeeStatus.class}">${employeeStatus.text}</span></td>
-      <td>${formatDate(vacationPeriod.start_date)}</td>
-      <td>${formatDate(vacationPeriod.end_date)}</td>
-      <td>${vacationPeriod.days}</td>
-      <td class="actions-column">
-        <div class="action-buttons">
-          ${canManage ? `
-            <button class="btn btn--outline btn-icon" onclick="openVacationPeriodForm(${vacationPeriod.id})" title="Редагувати"><i class="fas fa-pen"></i></button>
-            <button class="btn btn--reject btn-icon" onclick="deleteVacationPeriod(${vacationPeriod.id})" title="Видалити"><i class="fas fa-trash"></i></button>
-          ` : ''}
-        </div>
-      </td>
-    `;
+    if (isMyView) {
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td><span class="employee-status employee-status--${employeeStatus.class}">${employeeStatus.text}</span></td>
+        <td>${formatDate(vacationPeriod.start_date)}</td>
+        <td>${formatDate(vacationPeriod.end_date)}</td>
+        <td>${vacationPeriod.days}</td>
+      `;
+    } else if (isManagerView) {
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${employee ? employee.name : 'Невідомо'}</td>
+        <td><span class="employee-status employee-status--${employeeStatus.class}">${employeeStatus.text}</span></td>
+        <td>${formatDate(vacationPeriod.start_date)}</td>
+        <td>${formatDate(vacationPeriod.end_date)}</td>
+        <td>${vacationPeriod.days}</td>
+      `;
+    } else {
+      row.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${employee ? employee.name : 'Невідомо'}</td>
+        <td>${employee ? employee.department : 'Невідомо'}</td>
+        <td><span class="employee-status employee-status--${employeeStatus.class}">${employeeStatus.text}</span></td>
+        <td>${formatDate(vacationPeriod.start_date)}</td>
+        <td>${formatDate(vacationPeriod.end_date)}</td>
+        <td>${vacationPeriod.days}</td>
+        <td class="actions-column">
+          <div class="action-buttons">
+            ${canManage ? `
+              <button class="btn btn--outline btn-icon" onclick="openVacationPeriodForm(${vacationPeriod.id})" title="Редагувати"><i class="fas fa-pen"></i></button>
+              <button class="btn btn--reject btn-icon" onclick="deleteVacationPeriod(${vacationPeriod.id})" title="Видалити"><i class="fas fa-trash"></i></button>
+            ` : ''}
+          </div>
+        </td>
+      `;
+    }
     elements.vacationsTableBody.appendChild(row);
   });
 }
+
 
 function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString('uk-UA');
