@@ -6,6 +6,7 @@
     <title>Vacation Dashboard - Система управління періодами відпусток</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- Header -->
@@ -107,52 +108,66 @@
                             <div class="calendar-header">
                                 <h3>Календар періодів відпусток</h3>
                                 <div class="calendar-controls">
-                                    <button id="prev-month" class="btn btn--outline btn--sm">
-                                        <i class="fas fa-chevron-left"></i>
-                                    </button>
+                                    <button id="prev-month" class="btn btn--outline btn--sm"><i class="fas fa-chevron-left"></i></button>
                                     <span id="current-month-year">Жовтень 2025</span>
-                                    <button id="next-month" class="btn btn--outline btn--sm">
-                                        <i class="fas fa-chevron-right"></i>
-                                    </button>
+                                    <button id="next-month" class="btn btn--outline btn--sm"><i class="fas fa-chevron-right"></i></button>
                                 </div>
                             </div>
-                            <div class="calendar-grid" id="calendar-grid">
-                                <!-- Calendar will be populated dynamically -->
-                            </div>
+                            <div class="calendar-grid" id="calendar-grid"></div>
                         </div>
 
                         <!-- Table View -->
                         <div class="table-section">
                             <div class="table-header">
                                 <h3>Список періодів відпусток</h3>
-                                <button id="add-vacation-btn" class="btn btn--primary hidden">
-                                    <i class="fas fa-plus"></i>
-                                    Запланувати період відпустки
-                                </button>
+                                <button id="add-vacation-btn" class="btn btn--primary hidden"><i class="fas fa-plus"></i> Запланувати період відпустки</button>
                             </div>
                             <div class="table-container">
                                 <table id="vacations-table" class="vacations-table">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Співробітник</th>
-                                            <th>Департамент</th>
-                                            <th>Статус співробітника</th>
-                                            <th>Початок</th>
-                                            <th>Кінець</th>
-                                            <th>Днів</th>
-                                            <th>Залишилось днів</th>
-                                            <th class="actions-column">Дії</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="vacations-table-body">
-                                        <!-- Table rows will be populated dynamically -->
-                                    </tbody>
+                                    <thead></thead>
+                                    <tbody id="vacations-table-body"></tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Analytics Section (Moved) -->
+                <section id="analytics-section" aria-label="HR Analytics" class="analytics-section hidden">
+                    <div class="chart-card">
+                        <div class="kpi-grid">
+                            <div class="kpi-card"><div class="kpi-value" id="kpi-total-employees">--</div><div class="kpi-label">Всього співробітників</div></div>
+                            <div class="kpi-card"><div class="kpi-value" id="kpi-on-leave">--</div><div class="kpi-label">Зараз у відпустці</div></div>
+                            <div class="kpi-card"><div class="kpi-value" id="kpi-planned-leaves">--</div><div class="kpi-label">Заплановано відпусток</div></div>
+                            <div class="kpi-card"><div class="kpi-value" id="kpi-avg-days-left">--</div><div class="kpi-label">Середній залишок днів</div></div>
+                            <div class="kpi-card"><div class="kpi-value" id="kpi-burn-rate">--</div><div class="kpi-label">Burn Rate</div></div>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Статус співробітників</h3>
+                        <div class="chart-container">
+                            <canvas id="employee-status-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Використання відпусток за департаментами</h3>
+                        <div class="chart-container">
+                            <canvas id="department-leave-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h4>Топ-5 співробітників із найбільшою кількістю днів відпустки</h4>
+                        <div class="ranking-table-container">
+                            <table id="most-days-table" class="ranking-table"></table>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                         <h4>Топ-5 співробітників із найменшою кількістю днів відпустки</h4>
+                        <div class="ranking-table-container">
+                            <table id="least-days-table" class="ranking-table"></table>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
     </main>
@@ -162,18 +177,14 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="vacation-form-title">Запланувати період відпустки</h3>
-                <button class="modal-close" id="vacation-form-modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
+                <button class="modal-close" id="vacation-form-modal-close"><i class="fas fa-times"></i></button>
             </div>
             <form id="vacation-form">
                 <input type="hidden" id="vacation-id-input" />
                 <div class="modal-body">
                     <div class="form-group" id="employee-select-group">
                         <label for="employee-select" class="form-label">Співробітник</label>
-                        <select id="employee-select" class="form-control" required>
-                            <!-- Options will be populated dynamically -->
-                        </select>.
+                        <select id="employee-select" class="form-control" required></select>
                     </div>
                     <div class="form-group">
                         <label for="start-date-input" class="form-label">Дата початку</label>
