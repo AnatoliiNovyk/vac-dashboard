@@ -250,7 +250,7 @@ function getVacationPeriodsForCurrentTab() {
       return appData.vacation_periods;
     case 'hr-manager':
       const hrEmployeeIds = appData.employees.filter(emp => emp.department === 'HR').map(emp => emp.id);
-      return appData.vacation_periods.filter(req => hrEmployeeIds.includes(req.employee_id));
+      return app.vacation_periods.filter(req => hrEmployeeIds.includes(req.employee_id));
     case 'manager-team':
       const subordinateIds = getAllSubordinates(currentUser.id);
       return appData.vacation_periods.filter(req => subordinateIds.includes(req.employee_id));
@@ -332,11 +332,11 @@ function updateTable() {
   // Update table headers
   let headerHtml = '<tr>';
   if (isMyView) {
-    headerHtml += '<th>#</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th>';
+    headerHtml += '<th>#</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th><th>Залишилось днів</th>';
   } else if (isManagerView) {
-    headerHtml += '<th>#</th><th>Співробітник</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th>';
+    headerHtml += '<th>#</th><th>Співробітник</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th><th>Залишилось днів</th>';
   } else if (isHRView) {
-    headerHtml += '<th>#</th><th>Співробітник</th><th>ІПН</th><th>Департамент</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th><th class="actions-column">Дії</th>';
+    headerHtml += '<th>#</th><th>Співробітник</th><th>ІПН</th><th>Департамент</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th><th>Залишилось днів</th><th class="actions-column">Дії</th>';
   }
   headerHtml += '</tr>';
   elements.vacationsTableHeader.innerHTML = headerHtml;
@@ -345,7 +345,7 @@ function updateTable() {
   elements.vacationsTableBody.innerHTML = '';
   
   if (filteredVacationPeriods.length === 0) {
-    const colspan = isMyView ? 5 : isManagerView ? 6 : isHRView ? 9 : 8;
+    const colspan = isMyView ? 6 : isManagerView ? 7 : isHRView ? 10 : 9;
     elements.vacationsTableBody.innerHTML = `<tr><td colspan="${colspan}" class="empty-state"><i class="fas fa-calendar-times"></i><p>Немає періодів відпусток для відображення</p></td></tr>`;
     return;
   }
@@ -354,6 +354,7 @@ function updateTable() {
     const employee = appData.employees.find(emp => emp.id === vacationPeriod.employee_id);
     const employeeStatus = getEmployeeStatus(vacationPeriod.employee_id);
     const row = document.createElement('tr');
+    const daysLeft = employee.total_vacation_days - employee.used_vacation_days;
     
     let rowHtml = `<td>${index + 1}</td>`;
     if (isMyView) {
@@ -362,6 +363,7 @@ function updateTable() {
         <td>${formatDate(vacationPeriod.start_date)}</td>
         <td>${formatDate(vacationPeriod.end_date)}</td>
         <td>${vacationPeriod.days}</td>
+        <td>${daysLeft}</td>
       `;
     } else if (isManagerView) {
       rowHtml += `
@@ -370,6 +372,7 @@ function updateTable() {
         <td>${formatDate(vacationPeriod.start_date)}</td>
         <td>${formatDate(vacationPeriod.end_date)}</td>
         <td>${vacationPeriod.days}</td>
+        <td>${daysLeft}</td>
       `;
     } else if (isHRView) {
         const canManage = currentRole === 'hr';
@@ -381,6 +384,7 @@ function updateTable() {
             <td>${formatDate(vacationPeriod.start_date)}</td>
             <td>${formatDate(vacationPeriod.end_date)}</td>
             <td>${vacationPeriod.days}</td>
+            <td>${daysLeft}</td>
             <td class="actions-column">
               <div class="action-buttons">
                 ${canManage ? `
