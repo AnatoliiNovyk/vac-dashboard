@@ -102,7 +102,7 @@
                     </div>
 
                     <!-- Content Area -->
-                    <div class="content-area">
+                    <div class="content-area" id="content-area">
                         <!-- Calendar View -->
                         <div class="calendar-section">
                             <div class="calendar-header">
@@ -130,44 +130,46 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Analytics Section -->
+                    <section id="analytics-section" aria-label="HR Analytics" class="analytics-section hidden">
+                        <div class="analytics-grid">
+                            <div class="chart-card">
+                                <div class="kpi-grid">
+                                    <div class="kpi-card"><div class="kpi-value" id="kpi-total-employees">--</div><div class="kpi-label">Всього співробітників</div></div>
+                                    <div class="kpi-card"><div class="kpi-value" id="kpi-on-leave">--</div><div class="kpi-label">Зараз у відпустці</div></div>
+                                    <div class="kpi-card"><div class="kpi-value" id="kpi-planned-leaves">--</div><div class="kpi-label">Заплановано відпусток</div></div>
+                                    <div class="kpi-card"><div class="kpi-value" id="kpi-avg-days-left">--</div><div class="kpi-label">Середній залишок днів</div></div>
+                                    <div class="kpi-card"><div class="kpi-value" id="kpi-burn-rate">--</div><div class="kpi-label">Burn Rate</div></div>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>Статус співробітників</h3>
+                                <div class="chart-container">
+                                    <canvas id="employee-status-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>Використання відпусток за департаментами</h3>
+                                <div class="chart-container">
+                                    <canvas id="department-leave-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h4>Топ-5 співробітників із найбільшою кількістю днів відпустки</h4>
+                                <div class="ranking-table-container">
+                                    <table id="most-days-table" class="ranking-table"></table>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                 <h4>Топ-5 співробітників із найменшою кількістю днів відпустки</h4>
+                                <div class="ranking-table-container">
+                                    <table id="least-days-table" class="ranking-table"></table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-
-                <!-- Analytics Section (Moved) -->
-                <section id="analytics-section" aria-label="HR Analytics" class="analytics-section hidden">
-                    <div class="chart-card">
-                        <div class="kpi-grid">
-                            <div class="kpi-card"><div class="kpi-value" id="kpi-total-employees">--</div><div class="kpi-label">Всього співробітників</div></div>
-                            <div class="kpi-card"><div class="kpi-value" id="kpi-on-leave">--</div><div class="kpi-label">Зараз у відпустці</div></div>
-                            <div class="kpi-card"><div class="kpi-value" id="kpi-planned-leaves">--</div><div class="kpi-label">Заплановано відпусток</div></div>
-                            <div class="kpi-card"><div class="kpi-value" id="kpi-avg-days-left">--</div><div class="kpi-label">Середній залишок днів</div></div>
-                            <div class="kpi-card"><div class="kpi-value" id="kpi-burn-rate">--</div><div class="kpi-label">Burn Rate</div></div>
-                        </div>
-                    </div>
-                    <div class="chart-card">
-                        <h3>Статус співробітників</h3>
-                        <div class="chart-container">
-                            <canvas id="employee-status-chart"></canvas>
-                        </div>
-                    </div>
-                    <div class="chart-card">
-                        <h3>Використання відпусток за департаментами</h3>
-                        <div class="chart-container">
-                            <canvas id="department-leave-chart"></canvas>
-                        </div>
-                    </div>
-                    <div class="chart-card">
-                        <h4>Топ-5 співробітників із найбільшою кількістю днів відпустки</h4>
-                        <div class="ranking-table-container">
-                            <table id="most-days-table" class="ranking-table"></table>
-                        </div>
-                    </div>
-                    <div class="chart-card">
-                         <h4>Топ-5 співробітників із найменшою кількістю днів відпустки</h4>
-                        <div class="ranking-table-container">
-                            <table id="least-days-table" class="ranking-table"></table>
-                        </div>
-                    </div>
-                </section>
             </div>
         </div>
     </main>

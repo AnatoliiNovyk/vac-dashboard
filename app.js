@@ -94,7 +94,8 @@ const elements = {
     employeeStatusChart: document.getElementById('employee-status-chart'),
     departmentLeaveChart: document.getElementById('department-leave-chart'),
     mostDaysTable: document.getElementById('most-days-table'),
-    leastDaysTable: document.getElementById('least-days-table')
+    leastDaysTable: document.getElementById('least-days-table'),
+    contentArea: document.getElementById('content-area')
 };
 
 // --- Data Persistence ---
@@ -205,13 +206,16 @@ function getTabsForRole(role) {
     let tabs = [];
     if (role === 'hr') {
         tabs.push({ key: 'hr-all', label: 'HR View', icon: 'fas fa-users' });
-        if (currentUser.is_hr_manager) tabs.push({ key: 'hr-manager', label: 'Manager View', icon: 'fas fa-user-tie' });
+        if (currentUser.is_hr_manager) {
+            tabs.push({ key: 'hr-manager', label: 'Manager View', icon: 'fas fa-user-tie' });
+        }
     } else if (role === 'manager') {
         tabs.push({ key: 'manager-team', label: 'Manager View', icon: 'fas fa-users' });
     }
     tabs.push({ key: 'my-view', label: 'My View', icon: 'fas fa-user' });
     return tabs;
 }
+
 
 function switchTab(tabKey, tabButton) {
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -223,19 +227,21 @@ function switchTab(tabKey, tabButton) {
 function updateTabContent() {
     const isHRView = currentTab === 'hr-all';
     const isManagerView = ['hr-manager', 'manager-team'].includes(currentTab);
+
     elements.analyticsSection.classList.toggle('hidden', !isHRView);
-    elements.filtersSection.style.display = isHRView || isManagerView ? 'block' : 'none';
+    elements.filtersSection.style.display = 'block';
+    
     elements.addVacationPeriodBtn.classList.toggle('hidden', currentRole !== 'hr' || !isHRView);
     elements.departmentFilterGroup.style.display = isHRView ? 'block' : 'none';
     elements.statusFilterGroup.style.display = isHRView || isManagerView ? 'block' : 'none';
-    if (isManagerView) elements.departmentFilterGroup.style.display = 'none';
     
     if (isHRView) {
-        initCharts(); // Initialize charts if they don't exist
+        initCharts();
     }
 
     applyFilters();
 }
+
 
 // --- Centralized Data Processing ---
 function applyFilters() {
@@ -246,7 +252,7 @@ function applyFilters() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const vacationPeriods = getVacationPeriodsForCurrentTab();
+    let vacationPeriods = getVacationPeriodsForCurrentTab();
     
     // Enrich data with employee info and calculated status
     let processedData = vacationPeriods.map(vacation => {
@@ -268,13 +274,15 @@ function applyFilters() {
     updateTable(processedData);
     updateCalendar(processedData);
     if (isHRView) {
-      updateAnalytics(processedData);
+        updateAnalytics(processedData);
     }
 }
 
+
 function getVacationPeriodsForCurrentTab() {
   switch (currentTab) {
-    case 'hr-all': return appData.vacation_periods;
+    case 'hr-all':
+         return appData.vacation_periods;
     case 'hr-manager': return appData.vacation_periods.filter(p => appData.employees.find(e => e.id === p.employee_id)?.department === 'HR');
     case 'manager-team': return appData.vacation_periods.filter(p => getAllSubordinates(currentUser.id).includes(p.employee_id));
     case 'my-view': return appData.vacation_periods.filter(p => p.employee_id === currentUser.id);
@@ -374,7 +382,7 @@ function updateCalendar(processedData) {
 }
 
 function formatDate(date) {
-  return new Date(date).toLocaleDateString('uk-UA');
+  return new Date(date).toLocaleString('uk-UA');
 }
 
 function changeMonth(dir) {
@@ -413,9 +421,9 @@ function initCharts() {
 
 
 function updateAnalytics(processedData) {
-    const uniqueEmployees = [...new Map(processedData.map(item => [item.employee.id, item.employee])).values()];
+    const uniqueEmployeesInView = [...new Map(processedData.map(item => [item.employee.id, item.employee])).values()];
 
-    if (uniqueEmployees.length === 0) {
+    if (uniqueEmployeesInView.length === 0) {
       elements.kpiTotalEmployees.textContent = 0;
       elements.kpiOnLeave.textContent = 0;
       elements.kpiPlannedLeaves.textContent = 0;
@@ -431,18 +439,18 @@ function updateAnalytics(processedData) {
     const onLeave = statuses.filter(s => s === 'on-leave').length;
     const planned = statuses.filter(s => s === 'planned').length;
     
-    const totalUsed = uniqueEmployees.reduce((sum, e) => sum + e.used_vacation_days, 0);
-    const totalDays = uniqueEmployees.reduce((sum, e) => sum + e.total_vacation_days, 0);
+    const totalUsed = uniqueEmployeesInView.reduce((sum, e) => sum + e.used_vacation_days, 0);
+    const totalDays = uniqueEmployeesInView.reduce((sum, e) => sum + e.total_vacation_days, 0);
 
-    elements.kpiTotalEmployees.textContent = uniqueEmployees.length;
+    elements.kpiTotalEmployees.textContent = uniqueEmployeesInView.length;
     elements.kpiOnLeave.textContent = onLeave;
     elements.kpiPlannedLeaves.textContent = planned;
-    elements.kpiAvgDaysLeft.textContent = ((totalDays - totalUsed) / uniqueEmployees.length).toFixed(1);
+    elements.kpiAvgDaysLeft.textContent = ((totalDays - totalUsed) / uniqueEmployeesInView.length).toFixed(1);
     elements.kpiBurnRate.textContent = totalDays > 0 ? `${((totalUsed / totalDays) * 100).toFixed(1)}%` : 'N/A';
     
-    updateEmployeeStatusChart(onLeave, planned, uniqueEmployees.length - onLeave - planned);
-    updateDepartmentLeaveChart(uniqueEmployees);
-    updateEmployeeRankings(uniqueEmployees);
+    updateEmployeeStatusChart(onLeave, planned, uniqueEmployeesInView.length - onLeave - planned);
+    updateDepartmentLeaveChart(uniqueEmployeesInView);
+    updateEmployeeRankings(uniqueEmployeesInView);
 }
 
 function updateEmployeeStatusChart(onLeave, planned, atWork) {
