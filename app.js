@@ -5,14 +5,14 @@ let appData = {};
 // Default data structure if localStorage is empty
 const defaultAppData = {
   employees: [
-    {"id": 1, "name": "Олексій Коваленко", "role": "employee", "department": "IT", "position": "Senior Developer", "manager_id": 3, "total_vacation_days": 24, "used_vacation_days": 8},
-    {"id": 2, "name": "Марина Петренко", "role": "employee", "department": "Marketing", "position": "Marketing Specialist", "manager_id": 4, "total_vacation_days": 22, "used_vacation_days": 5},
-    {"id": 3, "name": "Дмитро Іваненко", "role": "manager", "department": "IT", "position": "IT Manager", "manager_id": 5, "total_vacation_days": 26, "used_vacation_days": 12},
-    {"id": 4, "name": "Анна Сидоренко", "role": "manager", "department": "Marketing", "position": "Marketing Manager", "manager_id": 5, "total_vacation_days": 25, "used_vacation_days": 10},
-    {"id": 5, "name": "Володимир Шевченко", "role": "hr", "department": "HR", "position": "HR Director", "manager_id": null, "is_hr_manager": true, "total_vacation_days": 28, "used_vacation_days": 14},
-    {"id": 6, "name": "Світлана Мельник", "role": "employee", "department": "Finance", "position": "Accountant", "manager_id": 7, "total_vacation_days": 20, "used_vacation_days": 6},
-    {"id": 7, "name": "Ігор Лисенко", "role": "manager", "department": "Finance", "position": "Finance Manager", "manager_id": 5, "total_vacation_days": 24, "used_vacation_days": 9},
-    {"id": 8, "name": "Тетяна Бондаренко", "role": "employee", "department": "IT", "position": "Junior Developer", "manager_id": 3, "total_vacation_days": 20, "used_vacation_days": 4}
+    {"id": 1, "name": "Олексій Коваленко", "role": "employee", "department": "IT", "position": "Senior Developer", "manager_id": 3, "total_vacation_days": 24, "used_vacation_days": 8, "tin": "1234567890"},
+    {"id": 2, "name": "Марина Петренко", "role": "employee", "department": "Marketing", "position": "Marketing Specialist", "manager_id": 4, "total_vacation_days": 22, "used_vacation_days": 5, "tin": "0987654321"},
+    {"id": 3, "name": "Дмитро Іваненко", "role": "manager", "department": "IT", "position": "IT Manager", "manager_id": 5, "total_vacation_days": 26, "used_vacation_days": 12, "tin": "1122334455"},
+    {"id": 4, "name": "Анна Сидоренко", "role": "manager", "department": "Marketing", "position": "Marketing Manager", "manager_id": 5, "total_vacation_days": 25, "used_vacation_days": 10, "tin": "5566778899"},
+    {"id": 5, "name": "Володимир Шевченко", "role": "hr", "department": "HR", "position": "HR Director", "manager_id": null, "is_hr_manager": true, "total_vacation_days": 28, "used_vacation_days": 14, "tin": "1231231234"},
+    {"id": 6, "name": "Світлана Мельник", "role": "employee", "department": "Finance", "position": "Accountant", "manager_id": 7, "total_vacation_days": 20, "used_vacation_days": 6, "tin": "4564564567"},
+    {"id": 7, "name": "Ігор Лисенко", "role": "manager", "department": "Finance", "position": "Finance Manager", "manager_id": 5, "total_vacation_days": 24, "used_vacation_days": 9, "tin": "7897897890"},
+    {"id": 8, "name": "Тетяна Бондаренко", "role": "employee", "department": "IT", "position": "Junior Developer", "manager_id": 3, "total_vacation_days": 20, "used_vacation_days": 4, "tin": "0011223344"}
   ],
   vacation_periods: [
     {"id": 1, "employee_id": 1, "start_date": "2025-10-15", "end_date": "2025-10-19", "days": 5, "manager_id": 3},
@@ -42,7 +42,10 @@ const elements = {
   usedDays: document.getElementById('used-days'),
   remainingDays: document.getElementById('remaining-days'),
   filtersSection: document.getElementById('filters-section'),
+  departmentFilterGroup: document.getElementById('department-filter-group'),
   departmentFilter: document.getElementById('department-filter'),
+  statusFilterGroup: document.getElementById('status-filter-group'),
+  statusFilter: document.getElementById('status-filter'),
   clearFilters: document.getElementById('clear-filters'),
   calendarGrid: document.getElementById('calendar-grid'),
   currentMonthYear: document.getElementById('current-month-year'),
@@ -74,6 +77,16 @@ function loadData() {
   const savedData = localStorage.getItem('vacationDashboardData');
   if (savedData) {
     appData = JSON.parse(savedData);
+    // Data migration for TIN field
+    if (appData.employees && !appData.employees[0].hasOwnProperty('tin')) {
+      appData.employees.forEach(employee => {
+        const defaultEmployee = defaultAppData.employees.find(e => e.id === employee.id);
+        if (defaultEmployee) {
+          employee.tin = defaultEmployee.tin;
+        }
+      });
+      saveData();
+    }
   } else {
     appData = defaultAppData;
   }
@@ -95,6 +108,7 @@ function initializeApp() {
   elements.nextMonth.addEventListener('click', () => changeMonth(1));
   
   elements.departmentFilter.addEventListener('change', applyFilters);
+  elements.statusFilter.addEventListener('change', applyFilters);
   
   elements.addVacationPeriodBtn.addEventListener('click', () => openVacationPeriodForm());
   elements.vacationPeriodFormModalClose.addEventListener('click', () => closeModal(elements.vacationPeriodFormModal));
@@ -203,13 +217,20 @@ function switchTab(tabKey, tabButton) {
 }
 
 function updateTabContent() {
-  const isHRView = currentTab === 'hr-all';
-  const isManagerView = currentTab === 'hr-manager' || currentTab === 'manager-team';
-  
-  elements.filtersSection.style.display = (isHRView || isManagerView) ? 'block' : 'none';
-  elements.addVacationPeriodBtn.classList.toggle('hidden', currentRole !== 'hr' || currentTab !== 'hr-all');
+    const isHRView = currentTab === 'hr-all';
+    const isManagerView = currentTab === 'hr-manager' || currentTab === 'manager-team';
 
-  applyFilters();
+    elements.filtersSection.style.display = isHRView || isManagerView ? 'block' : 'none';
+    elements.addVacationPeriodBtn.classList.toggle('hidden', currentRole !== 'hr' || !isHRView);
+
+    elements.departmentFilterGroup.style.display = isHRView ? 'block' : 'none';
+    elements.statusFilterGroup.style.display = isHRView || isManagerView ? 'block' : 'none';
+
+    if (isManagerView) {
+        elements.departmentFilterGroup.style.display = 'none';
+    }
+    
+    applyFilters();
 }
 
 function getAllSubordinates(managerId) {
@@ -241,24 +262,44 @@ function getVacationPeriodsForCurrentTab() {
 }
 
 function applyFilters() {
-  let vacationPeriods = getVacationPeriodsForCurrentTab();
-  
-  const deptFilter = elements.departmentFilter.value;
-  
-  if (deptFilter) {
-    vacationPeriods = vacationPeriods.filter(v => {
-      const employee = appData.employees.find(emp => emp.id === v.employee_id);
-      return employee && employee.department === deptFilter;
-    });
-  }
-  
-  filteredVacationPeriods = vacationPeriods;
-  updateTable();
-  updateCalendar();
+    let vacationPeriods = getVacationPeriodsForCurrentTab();
+    const isHRView = currentTab === 'hr-all';
+    const isManagerView = currentTab === 'hr-manager' || currentTab === 'manager-team';
+
+    const deptFilter = elements.departmentFilter.value;
+    const statusFilter = elements.statusFilter.value;
+
+    if (isHRView) {
+        if (deptFilter) {
+            vacationPeriods = vacationPeriods.filter(v => {
+                const employee = appData.employees.find(emp => emp.id === v.employee_id);
+                return employee && employee.department === deptFilter;
+            });
+        }
+        if (statusFilter) {
+            vacationPeriods = vacationPeriods.filter(v => {
+                const status = getEmployeeStatus(v.employee_id);
+                return status.class === statusFilter;
+            });
+        }
+    } else if (isManagerView) {
+        if (statusFilter) {
+            vacationPeriods = vacationPeriods.filter(v => {
+                const status = getEmployeeStatus(v.employee_id);
+                return status.class === statusFilter;
+            });
+        }
+    }
+
+    filteredVacationPeriods = vacationPeriods;
+    updateTable();
+    updateCalendar();
 }
+
 
 function clearFilters() {
   elements.departmentFilter.value = '';
+  elements.statusFilter.value = '';
   applyFilters();
 }
 
@@ -286,49 +327,25 @@ function getEmployeeStatus(employeeId) {
 function updateTable() {
   const isMyView = currentTab === 'my-view';
   const isManagerView = currentTab === 'hr-manager' || currentTab === 'manager-team';
+  const isHRView = currentTab === 'hr-all';
   
   // Update table headers
+  let headerHtml = '<tr>';
   if (isMyView) {
-    elements.vacationsTableHeader.innerHTML = `
-      <tr>
-        <th>#</th>
-        <th>Статус співробітника</th>
-        <th>Початок</th>
-        <th>Кінець</th>
-        <th>Днів</th>
-      </tr>
-    `;
+    headerHtml += '<th>#</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th>';
   } else if (isManagerView) {
-    elements.vacationsTableHeader.innerHTML = `
-      <tr>
-        <th>#</th>
-        <th>Співробітник</th>
-        <th>Статус співробітника</th>
-        <th>Початок</th>
-        <th>Кінець</th>
-        <th>Днів</th>
-      </tr>
-    `;
-  } else {
-    elements.vacationsTableHeader.innerHTML = `
-      <tr>
-        <th>#</th>
-        <th>Співробітник</th>
-        <th>Департамент</th>
-        <th>Статус співробітника</th>
-        <th>Початок</th>
-        <th>Кінець</th>
-        <th>Днів</th>
-        <th class="actions-column">Дії</th>
-      </tr>
-    `;
+    headerHtml += '<th>#</th><th>Співробітник</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th>';
+  } else if (isHRView) {
+    headerHtml += '<th>#</th><th>Співробітник</th><th>ІПН</th><th>Департамент</th><th>Статус співробітника</th><th>Початок</th><th>Кінець</th><th>Днів</th><th class="actions-column">Дії</th>';
   }
+  headerHtml += '</tr>';
+  elements.vacationsTableHeader.innerHTML = headerHtml;
   
   // Update table body
   elements.vacationsTableBody.innerHTML = '';
   
   if (filteredVacationPeriods.length === 0) {
-    const colspan = isMyView ? 5 : isManagerView ? 6 : 8;
+    const colspan = isMyView ? 5 : isManagerView ? 6 : isHRView ? 9 : 8;
     elements.vacationsTableBody.innerHTML = `<tr><td colspan="${colspan}" class="empty-state"><i class="fas fa-calendar-times"></i><p>Немає періодів відпусток для відображення</p></td></tr>`;
     return;
   }
@@ -338,44 +355,43 @@ function updateTable() {
     const employeeStatus = getEmployeeStatus(vacationPeriod.employee_id);
     const row = document.createElement('tr');
     
-    const canManage = currentRole === 'hr';
-    
+    let rowHtml = `<td>${index + 1}</td>`;
     if (isMyView) {
-      row.innerHTML = `
-        <td>${index + 1}</td>
+      rowHtml += `
         <td><span class="employee-status employee-status--${employeeStatus.class}">${employeeStatus.text}</span></td>
         <td>${formatDate(vacationPeriod.start_date)}</td>
         <td>${formatDate(vacationPeriod.end_date)}</td>
         <td>${vacationPeriod.days}</td>
       `;
     } else if (isManagerView) {
-      row.innerHTML = `
-        <td>${index + 1}</td>
+      rowHtml += `
         <td>${employee ? employee.name : 'Невідомо'}</td>
         <td><span class="employee-status employee-status--${employeeStatus.class}">${employeeStatus.text}</span></td>
         <td>${formatDate(vacationPeriod.start_date)}</td>
         <td>${formatDate(vacationPeriod.end_date)}</td>
         <td>${vacationPeriod.days}</td>
       `;
-    } else {
-      row.innerHTML = `
-        <td>${index + 1}</td>
-        <td>${employee ? employee.name : 'Невідомо'}</td>
-        <td>${employee ? employee.department : 'Невідомо'}</td>
-        <td><span class="employee-status employee-status--${employeeStatus.class}">${employeeStatus.text}</span></td>
-        <td>${formatDate(vacationPeriod.start_date)}</td>
-        <td>${formatDate(vacationPeriod.end_date)}</td>
-        <td>${vacationPeriod.days}</td>
-        <td class="actions-column">
-          <div class="action-buttons">
-            ${canManage ? `
-              <button class="btn btn--outline btn-icon" onclick="openVacationPeriodForm(${vacationPeriod.id})" title="Редагувати"><i class="fas fa-pen"></i></button>
-              <button class="btn btn--reject btn-icon" onclick="deleteVacationPeriod(${vacationPeriod.id})" title="Видалити"><i class="fas fa-trash"></i></button>
-            ` : ''}
-          </div>
-        </td>
-      `;
+    } else if (isHRView) {
+        const canManage = currentRole === 'hr';
+        rowHtml += `
+            <td>${employee ? employee.name : 'Невідомо'}</td>
+            <td>${employee.tin}</td>
+            <td>${employee ? employee.department : 'Невідомо'}</td>
+            <td><span class="employee-status employee-status--${employeeStatus.class}">${employeeStatus.text}</span></td>
+            <td>${formatDate(vacationPeriod.start_date)}</td>
+            <td>${formatDate(vacationPeriod.end_date)}</td>
+            <td>${vacationPeriod.days}</td>
+            <td class="actions-column">
+              <div class="action-buttons">
+                ${canManage ? `
+                  <button class="btn btn--outline btn-icon" onclick="openVacationPeriodForm(${vacationPeriod.id})" title="Редагувати"><i class="fas fa-pen"></i></button>
+                  <button class="btn btn--reject btn-icon" onclick="deleteVacationPeriod(${vacationPeriod.id})" title="Видалити"><i class="fas fa-trash"></i></button>
+                ` : ''}
+              </div>
+            </td>
+        `;
     }
+    row.innerHTML = rowHtml;
     elements.vacationsTableBody.appendChild(row);
   });
 }
@@ -466,7 +482,7 @@ function openVacationPeriodForm(vacationPeriodId = null) {
 
 function calculateVacationPeriodDays() {
   const startDate = elements.startDateInput.value;
-  const endDate = elements.endDateInput.value;
+  const endDate = document.getElementById('end-date-input').value;
 
   if (startDate && endDate) {
     const start = new Date(startDate);

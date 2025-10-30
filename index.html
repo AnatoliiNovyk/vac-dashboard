@@ -76,10 +76,19 @@
                     <!-- Filters -->
                     <div class="filters-section" id="filters-section">
                         <div class="filters-grid">
-                            <div class="filter-group">
+                            <div id="department-filter-group" class="filter-group">
                                 <label class="form-label">Департамент:</label>
                                 <select id="department-filter" class="form-control">
                                     <option value="">Всі департаменти</option>
+                                </select>
+                            </div>
+                            <div id="status-filter-group" class="filter-group" style="display: none;">
+                                <label class="form-label">Статус співробітника:</label>
+                                <select id="status-filter" class="form-control">
+                                    <option value="">Всі статуси</option>
+                                    <option value="on-leave">У відпустці</option>
+                                    <option value="planned">Заплановано</option>
+                                    <option value="at-work">На роботі</option>
                                 </select>
                             </div>
                             <div class="filter-group">
@@ -125,6 +134,7 @@
                                 <table id="vacations-table" class="vacations-table">
                                     <thead>
                                         <tr>
+                                            <th>#</th>
                                             <th>Співробітник</th>
                                             <th>Департамент</th>
                                             <th>Статус співробітника</th>
