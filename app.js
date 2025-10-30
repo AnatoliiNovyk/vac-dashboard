@@ -86,11 +86,7 @@ const elements = {
     employeeSelectGroup: document.getElementById('employee-select-group'),
     employeeSelect: document.getElementById('employee-select'),
     analyticsSection: document.getElementById('analytics-section'),
-    kpiTotalEmployees: document.getElementById('kpi-total-employees'),
-    kpiOnLeave: document.getElementById('kpi-on-leave'),
-    kpiPlannedLeaves: document.getElementById('kpi-planned-leaves'),
-    kpiAvgDaysLeft: document.getElementById('kpi-avg-days-left'),
-    kpiBurnRate: document.getElementById('kpi-burn-rate'),
+    kpiCardSlot: document.getElementById('kpi-card-slot'),
     employeeStatusChart: document.getElementById('employee-status-chart'),
     departmentLeaveChart: document.getElementById('department-leave-chart'),
     mostDaysTable: document.getElementById('most-days-table'),
@@ -141,6 +137,16 @@ function initializeApp() {
   elements.vacationPeriodForm.addEventListener('submit', handleVacationPeriodFormSubmit);
   elements.startDateInput.addEventListener('change', calculateVacationPeriodDays);
   elements.endDateInput.addEventListener('change', calculateVacationPeriodDays);
+  
+  // Inject KPI structure
+  elements.kpiCardSlot.innerHTML = `
+    <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-value" id="kpi-total-employees">--</div><div class="kpi-label">Всього співробітників</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpi-on-leave">--</div><div class="kpi-label">Зараз у відпустці</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpi-planned-leaves">--</div><div class="kpi-label">Заплановано відпусток</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpi-avg-days-left">--</div><div class="kpi-label">Середній залишок днів</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpi-burn-rate">--</div><div class="kpi-label">Burn Rate</div></div>
+    </div>`;
 }
 
 function populateFilterDropdowns() {
@@ -421,14 +427,20 @@ function initCharts() {
 
 
 function updateAnalytics(processedData) {
+    const kpiTotalEmployees = document.getElementById('kpi-total-employees');
+    const kpiOnLeave = document.getElementById('kpi-on-leave');
+    const kpiPlannedLeaves = document.getElementById('kpi-planned-leaves');
+    const kpiAvgDaysLeft = document.getElementById('kpi-avg-days-left');
+    const kpiBurnRate = document.getElementById('kpi-burn-rate');
+
     const uniqueEmployeesInView = [...new Map(processedData.map(item => [item.employee.id, item.employee])).values()];
 
     if (uniqueEmployeesInView.length === 0) {
-      elements.kpiTotalEmployees.textContent = 0;
-      elements.kpiOnLeave.textContent = 0;
-      elements.kpiPlannedLeaves.textContent = 0;
-      elements.kpiAvgDaysLeft.textContent = 'N/A';
-      elements.kpiBurnRate.textContent = 'N/A';
+      kpiTotalEmployees.textContent = 0;
+      kpiOnLeave.textContent = 0;
+      kpiPlannedLeaves.textContent = 0;
+      kpiAvgDaysLeft.textContent = 'N/A';
+      kpiBurnRate.textContent = 'N/A';
       updateEmployeeStatusChart(0, 0, 0);
       updateDepartmentLeaveChart([]);
       updateEmployeeRankings([]);
@@ -442,11 +454,11 @@ function updateAnalytics(processedData) {
     const totalUsed = uniqueEmployeesInView.reduce((sum, e) => sum + e.used_vacation_days, 0);
     const totalDays = uniqueEmployeesInView.reduce((sum, e) => sum + e.total_vacation_days, 0);
 
-    elements.kpiTotalEmployees.textContent = uniqueEmployeesInView.length;
-    elements.kpiOnLeave.textContent = onLeave;
-    elements.kpiPlannedLeaves.textContent = planned;
-    elements.kpiAvgDaysLeft.textContent = ((totalDays - totalUsed) / uniqueEmployeesInView.length).toFixed(1);
-    elements.kpiBurnRate.textContent = totalDays > 0 ? `${((totalUsed / totalDays) * 100).toFixed(1)}%` : 'N/A';
+    kpiTotalEmployees.textContent = uniqueEmployeesInView.length;
+    kpiOnLeave.textContent = onLeave;
+    kpiPlannedLeaves.textContent = planned;
+    kpiAvgDaysLeft.textContent = ((totalDays - totalUsed) / uniqueEmployeesInView.length).toFixed(1);
+    kpiBurnRate.textContent = totalDays > 0 ? `${((totalUsed / totalDays) * 100).toFixed(1)}%` : 'N/A';
     
     updateEmployeeStatusChart(onLeave, planned, uniqueEmployeesInView.length - onLeave - planned);
     updateDepartmentLeaveChart(uniqueEmployeesInView);
