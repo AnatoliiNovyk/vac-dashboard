@@ -74,8 +74,8 @@
 
                 <!-- Tab Content -->
                 <div class="tab-content">
-                    <!-- Filters -->
-                    <div class="filters-section" id="filters-section">
+                    <!-- Filters and Actions -->
+                    <div class="filters-actions-section" id="filters-actions-section">
                         <div class="filters-grid">
                             <div id="department-filter-group" class="filter-group">
                                 <label class="form-label">Департамент:</label>
@@ -98,6 +98,11 @@
                                     Очистити фільтри
                                 </button>
                             </div>
+                        </div>
+                        <div id="bas-sync-section" class="bas-sync-section hidden">
+                            <button id="import-bas-btn" class="btn btn--outline"><i class="fas fa-file-import"></i> Імпорт з BAS</button>
+                            <button id="export-bas-btn" class="btn btn--outline"><i class="fas fa-file-export"></i> Експорт у BAS</button>
+                            <button id="mapping-info-btn" class="btn btn--icon-only" aria-label="Схема полів"><i class="fas fa-info-circle"></i></button>
                         </div>
                     </div>
 
@@ -202,6 +207,109 @@
             </form>
         </div>
     </div>
+
+    <!-- BAS Sync Modals -->
+    <div id="import-bas-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Імпорт співробітників з BAS</h3>
+                <button class="modal-close" id="import-bas-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Спосіб імпорту:</label>
+                    <div class="tabs-nav">
+                         <button class="tab-button active" data-import-type="file">Файл (CSV/JSON)</button>
+                         <button class="tab-button" data-import-type="http">HTTP Endpoint</button>
+                    </div>
+                </div>
+                <div id="import-file-section">
+                    <div class="form-group">
+                        <label for="import-file-input" class="form-label">Оберіть або перетягніть файл:</label>
+                        <div class="drag-drop-area" id="drag-drop-area">
+                             <i class="fas fa-cloud-upload-alt"></i>
+                             <p>Перетягніть файл сюди або натисніть, щоб обрати</p>
+                             <input type="file" id="import-file-input" class="hidden" accept=".csv,.json,.xml">
+                        </div>
+                    </div>
+                    <div class="import-preview">
+                        <h4>Попередній перегляд:</h4>
+                        <div id="import-preview-content" class="table-container">
+                           <p>Тут буде попередній перегляд даних...</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="import-http-section" class="hidden">
+                     <p>Функціонал імпорту через HTTP Endpoint знаходиться у розробці.</p>
+                </div>
+            </div>
+             <div class="modal-footer">
+                <div id="import-summary" class="import-summary"></div>
+                <button type="button" id="cancel-import-btn" class="btn btn--secondary">Скасувати</button>
+                <button type="button" id="run-import-btn" class="btn btn--primary" disabled>Запустити імпорт</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="export-bas-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Експорт співробітників у BAS</h3>
+                <button class="modal-close" id="export-bas-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="export-form">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="export-format" class="form-label">Формат файлу:</label>
+                        <select id="export-format" class="form-control">
+                            <option value="csv">CSV</option>
+                            <option value="json">JSON</option>
+                            <option value="xml">XML (у розробці)</option>
+                        </select>
+                    </div>
+                    <fieldset>
+                        <legend>Фільтри</legend>
+                        <div class="form-group">
+                            <label for="export-department-filter" class="form-label">Департамент:</label>
+                            <select id="export-department-filter" class="form-control">
+                                <option value="">Всі департаменти</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="export-status-filter" class="form-label">Статус активності:</label>
+                             <select id="export-status-filter" class="form-control">
+                                <option value="">Всі статуси</option>
+                                <option value="active">Активні</option>
+                                <option value="inactive">Неактивні</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input type="checkbox" id="export-only-changes-checkbox">
+                            <label for="export-only-changes-checkbox">Експортувати тільки зміни з дати:</label>
+                            <input type="date" id="export-changes-date-input" class="form-control" disabled>
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="cancel-export-btn" class="btn btn--secondary">Скасувати</button>
+                    <button type="submit" class="btn btn--primary">Експортувати</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="fields-mapping-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Схема полів (мапінг)</h3>
+                <button class="modal-close" id="fields-mapping-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p>Тут буде детальна інформація про мапінг полів між цією системою та BAS.</p>
+            </div>
+        </div>
+    </div>
+
 
     <script src="app.js"></script>
 </body>
