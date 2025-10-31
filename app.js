@@ -3,6 +3,11 @@
 let appData = {};
 let charts = {};
 
+// --- Feature Flags ---
+const FEATURES = {
+    HR_ANALYTICS_ENABLED: false
+};
+
 // --- Chart Configuration (Memoized) ---
 const commonChartOptions = {
     responsive: true,
@@ -234,16 +239,23 @@ function updateTabContent() {
     const isHRView = currentTab === 'hr-all';
     const isManagerView = ['hr-manager', 'manager-team'].includes(currentTab);
 
-    elements.analyticsSection.classList.toggle('hidden', !isHRView);
+    if (FEATURES.HR_ANALYTICS_ENABLED) {
+        elements.analyticsSection.classList.toggle('hidden', !isHRView);
+        if (isHRView) {
+            initCharts();
+        } else {
+            destroyCharts();
+        }
+    } else {
+        elements.analyticsSection.classList.add('hidden');
+        destroyCharts();
+    }
+
     elements.filtersSection.style.display = 'block';
     
     elements.addVacationPeriodBtn.classList.toggle('hidden', currentRole !== 'hr' || !isHRView);
     elements.departmentFilterGroup.style.display = isHRView ? 'block' : 'none';
     elements.statusFilterGroup.style.display = isHRView || isManagerView ? 'block' : 'none';
-    
-    if (isHRView) {
-        initCharts();
-    }
 
     applyFilters();
 }
@@ -279,7 +291,7 @@ function applyFilters() {
     // Pass processed data to rendering functions
     updateTable(processedData);
     updateCalendar(processedData);
-    if (isHRView) {
+    if (isHRView && FEATURES.HR_ANALYTICS_ENABLED) {
         updateAnalytics(processedData);
     }
 }
@@ -398,6 +410,7 @@ function changeMonth(dir) {
 
 // --- Analytics ---
 function initCharts() {
+    if (!FEATURES.HR_ANALYTICS_ENABLED) return;
     if (!charts.employeeStatus) {
         const ctx = elements.employeeStatusChart.getContext('2d');
         charts.employeeStatus = new Chart(ctx, {
@@ -425,8 +438,21 @@ function initCharts() {
     }
 }
 
+function destroyCharts() {
+    if (charts.employeeStatus) {
+        charts.employeeStatus.destroy();
+        charts.employeeStatus = null;
+    }
+    if (charts.departmentLeave) {
+        charts.departmentLeave.destroy();
+        charts.departmentLeave = null;
+    }
+}
+
 
 function updateAnalytics(processedData) {
+    if (!FEATURES.HR_ANALYTICS_ENABLED) return;
+
     const kpiTotalEmployees = document.getElementById('kpi-total-employees');
     const kpiOnLeave = document.getElementById('kpi-on-leave');
     const kpiPlannedLeaves = document.getElementById('kpi-planned-leaves');
