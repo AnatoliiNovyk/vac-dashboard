@@ -40,6 +40,14 @@
                         <i class="fas fa-user-circle"></i>
                         <span id="current-user-name">Користувач</span>
                         <span id="current-user-role" class="user-role-badge">Роль</span>
+                        <div class="role-switcher-container" style="margin-left: 20px; display: flex; align-items: center;">
+                            <label for="role-switcher" style="margin-right: 8px; font-size: 14px;">Переглянути як:</label>
+                            <select id="role-switcher" class="form-control" style="width: 150px; padding: 4px 8px; height: auto;">
+                                <option value="hr">HR</option>
+                                <option value="manager">Manager</option>
+                                <option value="employee">Employee</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="user-stats">
                         <div class="stat-item">
@@ -164,7 +172,7 @@
                         <label for="employee-select" class="form-label">Співробітник</label>
                         <select id="employee-select" class="form-control" required>
                             <!-- Options will be populated dynamically -->
-                        </select>.
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="start-date-input" class="form-label">Дата початку</label>
@@ -186,6 +194,14 @@
             </form>
         </div>
     </div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
 
     <script src="app.js"></script>
 </body>
