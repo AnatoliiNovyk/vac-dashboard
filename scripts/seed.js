@@ -1,14 +1,14 @@
 const admin = require('firebase-admin');
 
-// Налаштовуємо підключення до емулятора Firestore
+// Point to the Firestore emulator
 process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
 
-// Ініціалізуємо додаток з тим самим project ID, що й інші скрипти
+// Initialize the app with a consistent project ID
 admin.initializeApp({ projectId: 'vacation-dashboard-local' });
 
 const db = admin.firestore();
 
-// Демо-дані: 25 співробітників
+// Demo data: 25 employees
 const employees = [
   { name: 'Олександр', surname: 'Іваненко', tax_id: '1111111111', is_hr: true, is_manager: false },
   { name: 'Марія', surname: 'Петренко', tax_id: '2222222222', is_hr: false, is_manager: true },
@@ -39,24 +39,38 @@ const employees = [
 
 async function seedDatabase() {
   try {
-    console.log('Починаємо завантаження даних до Firestore...');
+    console.log('Starting to seed data into Firestore...');
 
     const batch = db.batch();
     let count = 0;
 
     employees.forEach((employee) => {
-      // В якості UID використовуємо хеш від ІПН, щоб бути послідовними
+      // Use a consistent UID based on the tax_id
       const docId = `uid_${employee.tax_id}`;
       const docRef = db.collection('employees').doc(docId);
-      batch.set(docRef, employee);
+
+      // Construct the roleFlags object as expected by the cloud function
+      const roleFlags = {
+        is_hr: employee.is_hr || false,
+        is_manager: employee.is_manager || false,
+      };
+
+      const employeeData = {
+        name: employee.name,
+        surname: employee.surname,
+        tax_id: employee.tax_id,
+        roleFlags: roleFlags, // Add the roleFlags object
+      };
+
+      batch.set(docRef, employeeData);
       count++;
     });
 
     await batch.commit();
-    console.log(`✅ Успішно завантажено ${count} записів співробітників до колекції \'employees\'.`);
+    console.log(`✅ Successfully seeded ${count} employee records into the 'employees' collection.`);
 
   } catch (error) {
-    console.error('❌ Помилка під час завантаження даних:', error);
+    console.error('❌ Error seeding database:', error);
     process.exit(1);
   }
 }

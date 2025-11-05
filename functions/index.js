@@ -1,64 +1,67 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const { getFirestore } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
-// Ініціалізуємо Admin SDK. 
-// В реальному середовищі Firebase права доступу налаштовуються автоматично.
+// Initialize the Admin SDK
 admin.initializeApp();
 
 /**
- * Cloud Function, що викликається через HTTPS.
- * Призначена для автентифікації користувача за його ІПН (tax_id).
- * 
- * @param {functions.https.Request} request - Об'єкт запиту. Очікується, що в тілі
- *   запиту буде поле `tax_id`.
- * @param {functions.https.Response} response - Об'єкт відповіді.
+ * A callable function to sign in a user via their Tax ID (ІПН).
+ * - Validates the TIN.
+ * - Finds the corresponding user in the 'employees' collection.
+ * - Sets custom user claims based on 'roleFlags' from the Firestore document.
+ * - Creates and returns a custom authentication token.
  */
 exports.signInWithTaxId = functions.https.onCall(async (data, context) => {
-
   const taxId = data.tax_id;
 
-  // --- Валідація вхідних даних ---
-  if (!taxId) {
+  // Validate the input
+  if (!taxId || !/^\d{10}$/.test(taxId)) {
     throw new functions.https.HttpsError(
       'invalid-argument',
-      'Запит повинен містити поле `tax_id`.'
+      'The function must be called with a `tax_id` that is a 10-digit string.'
     );
   }
 
   try {
-    // --- Пошук співробітника в Firestore ---
-    console.log(`Шукаю співробітника з ІПН: ${taxId}`);
-    const employeesRef = admin.firestore().collection('employees');
-    const snapshot = await employeesRef.where('tax_id', '==', taxId).limit(1).get();
+    console.log(`[Function] Searching for employee with tax_id: ${taxId}`);
+    const firestore = getFirestore();
+    const auth = getAuth();
+
+    // Find the user document by their tax_id
+    const snapshot = await firestore.collection('employees').where('tax_id', '==', taxId).limit(1).get();
 
     if (snapshot.empty) {
-      console.log(`Співробітника з ІПН ${taxId} не знайдено.`);
+      console.log(`[Function] Employee with tax_id ${taxId} not found.`);
       throw new functions.https.HttpsError(
         'not-found',
-        'Користувача з таким ІПН не знайдено.'
+        'User with this TIN not found.'
       );
     }
 
-    // --- Генерація кастомного токена --- 
-    // Ми використовуємо ID документа (який ми раніше зробили `uid_` + tax_id) як UID користувача.
     const userDoc = snapshot.docs[0];
     const uid = userDoc.id;
-    const customToken = await admin.auth().createCustomToken(uid);
+    const flags = userDoc.get('roleFlags') || {}; // Get roles, default to empty object
 
-    console.log(`Успішно створено кастомний токен для UID: ${uid}`);
+    console.log(`[Function] Found user with UID: ${uid}. Setting custom claims:`, flags);
+    await auth.setCustomUserClaims(uid, flags);
 
-    // --- Відправка токена клієнту ---
+    console.log(`[Function] Creating custom token for UID: ${uid}.`);
+    const customToken = await auth.createCustomToken(uid);
+
+    console.log(`[Function] Successfully created custom token for UID: ${uid}`);
     return { token: customToken };
 
   } catch (error) {
-    console.error("Помилка під час автентифікації:", error);
-    // Викидаємо помилку, щоб клієнт міг її обробити
+    console.error("[Function] Error during authentication:", error);
+    // Re-throw specific errors or wrap them in a generic internal error
     if (error instanceof functions.https.HttpsError) {
-      throw error; // Перекидаємо вже сформовану помилку
+      throw error;
     }
     throw new functions.https.HttpsError(
       'internal',
-      'Внутрішня помилка сервера. Спробуйте пізніше.'
+      'An internal server error occurred. Please check the function logs for details.'
     );
   }
 });
