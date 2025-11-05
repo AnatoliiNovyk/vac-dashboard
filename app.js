@@ -2,27 +2,6 @@
 // Global appData object
 let appData = {};
 
-// Default data structure if localStorage is empty
-const defaultAppData = {
-  employees: [
-    {"id": 1, "name": "Олексій Коваленко", "role": "employee", "department": "IT", "position": "Senior Developer", "manager_id": 3, "total_vacation_days": 24, "used_vacation_days": 8, "tin": "1234567890"},
-    {"id": 2, "name": "Марина Петренко", "role": "employee", "department": "Marketing", "position": "Marketing Specialist", "manager_id": 4, "total_vacation_days": 22, "used_vacation_days": 5, "tin": "0987654321"},
-    {"id": 3, "name": "Дмитро Іваненко", "role": "manager", "department": "IT", "position": "IT Manager", "manager_id": 5, "total_vacation_days": 26, "used_vacation_days": 12, "tin": "1122334455"},
-    {"id": 4, "name": "Анна Сидоренко", "role": "manager", "department": "Marketing", "position": "Marketing Manager", "manager_id": 5, "total_vacation_days": 25, "used_vacation_days": 10, "tin": "5566778899"},
-    {"id": 5, "name": "Володимир Шевченко", "role": "hr", "department": "HR", "position": "HR Director", "manager_id": null, "is_hr_manager": true, "total_vacation_days": 28, "used_vacation_days": 14, "tin": "1231231234"},
-    {"id": 6, "name": "Світлана Мельник", "role": "employee", "department": "Finance", "position": "Accountant", "manager_id": 7, "total_vacation_days": 20, "used_vacation_days": 6, "tin": "4564564567"},
-    {"id": 7, "name": "Ігор Лисенко", "role": "manager", "department": "Finance", "position": "Finance Manager", "manager_id": 5, "total_vacation_days": 24, "used_vacation_days": 9, "tin": "7897897890"},
-    {"id": 8, "name": "Тетяна Бондаренко", "role": "employee", "department": "IT", "position": "Junior Developer", "manager_id": 3, "total_vacation_days": 20, "used_vacation_days": 4, "tin": "0011223344"}
-  ],
-  vacation_periods: [
-    {"id": 1, "employee_id": 1, "start_date": "2025-10-15", "end_date": "2025-10-19", "days": 5, "manager_id": 3},
-    {"id": 3, "employee_id": 3, "start_date": "2025-12-20", "end_date": "2025-12-30", "days": 9, "manager_id": 5},
-    {"id": 4, "employee_id": 6, "start_date": "2025-10-25", "end_date": "2025-10-27", "days": 3, "manager_id": 7},
-    {"id": 5, "employee_id": 8, "start_date": "2025-11-15", "end_date": "2025-11-22", "days": 6, "manager_id": 3}
-  ],
-  departments: ["IT", "Marketing", "Finance", "HR", "Sales"]
-};
-
 // Application State
 let currentUser = null;
 let currentRole = '';
@@ -69,40 +48,32 @@ const elements = {
 };
 
 // --- Data Persistence ---
-function saveData() {
-  localStorage.setItem('vacationDashboardData', JSON.stringify(appData));
-}
-
-function loadData() {
-  const savedData = localStorage.getItem('vacationDashboardData');
-  if (savedData) {
-    appData = JSON.parse(savedData);
-    // Data migration for TIN field
-    if (appData.employees && !appData.employees[0].hasOwnProperty('tin')) {
-      appData.employees.forEach(employee => {
-        const defaultEmployee = defaultAppData.employees.find(e => e.id === employee.id);
-        if (defaultEmployee) {
-          employee.tin = defaultEmployee.tin;
-        }
-      });
-      saveData();
+async function loadData() {
+  try {
+    const response = await fetch('vacation_dashboard_data.json');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  } else {
-    appData = defaultAppData;
+    appData = await response.json();
+    appData.vacation_periods.forEach(req => delete req.status);
+  } catch (error) {
+    console.error("Could not load data:", error);
+    // Handle error appropriately, maybe show a message to the user
   }
-  appData.vacation_periods.forEach(req => delete req.status);
 }
 
 // Initialize Application
-document.addEventListener('DOMContentLoaded', function() {
-  loadData();
+document.addEventListener('DOMContentLoaded', async function() {
+  await loadData();
   initializeApp();
 });
 
 function initializeApp() {
   populateFilterDropdowns();
   
-  elements.userRoleSelect.addEventListener('change', handleRoleChange);
+  // Directly set a default user and role for now
+  handleRoleChange('hr'); 
+
   elements.clearFilters.addEventListener('click', clearFilters);
   elements.prevMonth.addEventListener('click', () => changeMonth(-1));
   elements.nextMonth.addEventListener('click', () => changeMonth(1));
@@ -134,12 +105,12 @@ function populateFilterDropdowns() {
   });
 }
 
-function handleRoleChange() {
-  const selectedRole = elements.userRoleSelect.value;
+function handleRoleChange(selectedRole) {
   if (selectedRole) {
     currentRole = selectedRole;
     
-    currentUser = appData.employees.find(emp => emp.role === selectedRole) || appData.employees[0];
+    // Temporarily find the HR manager to act as the default user
+    currentUser = appData.employees.find(emp => emp.is_hr_manager) || appData.employees.find(emp => emp.role === 'hr') || appData.employees[0];
     
     showDashboard();
   } else {
@@ -250,7 +221,7 @@ function getVacationPeriodsForCurrentTab() {
       return appData.vacation_periods;
     case 'hr-manager':
       const hrEmployeeIds = appData.employees.filter(emp => emp.department === 'HR').map(emp => emp.id);
-      return app.vacation_periods.filter(req => hrEmployeeIds.includes(req.employee_id));
+      return appData.vacation_periods.filter(req => hrEmployeeIds.includes(req.employee_id));
     case 'manager-team':
       const subordinateIds = getAllSubordinates(currentUser.id);
       return appData.vacation_periods.filter(req => subordinateIds.includes(req.employee_id));
@@ -539,7 +510,7 @@ function handleVacationPeriodFormSubmit(event) {
         appData.vacation_periods.push({ ...vacationPeriodData, id: Date.now() });
     }
     
-    saveData();
+    // saveData(); // This will be replaced with a call to Firebase
     closeModal(elements.vacationPeriodFormModal);
     applyFilters();
 }
@@ -552,7 +523,7 @@ function deleteVacationPeriod(vacationPeriodId) {
     }
   if (confirm('Ви впевнені, що хочете видалити цей запис про період відпустки?')) {
     appData.vacation_periods = appData.vacation_periods.filter(v => v.id !== vacationPeriodId);
-    saveData();
+    // saveData(); // This will be replaced with a call to Firebase
     applyFilters();
   }
 }
