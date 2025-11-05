@@ -1,8 +1,59 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    // Helper function to check for HR role.
+    // It checks a custom claim, which is the most secure way.
+    // We will need to set this claim using a Cloud Function later.
+    function isHR() {
+      return request.auth.token.isHR == true;
+    }
+
+    // Helper function to get user data from 'employees' collection
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/employees/$(userId)).data;
+    }
+
+    // --- Employees Collection Rules ---
+    match /employees/{userId} {
+      // Anyone authenticated can read employee data (for names, departments etc.)
+      // but sensitive data should be limited.
+      allow read: if request.auth != null;
+
+      // An employee can update their own info.
+      // An HR can update anyone's info.
+      allow update: if request.auth.uid == userId || isHR();
+      
+      // Only HR can create or delete employee records.
+      allow create, delete: if isHR();
+    }
+
+    // --- Vacation Periods Collection Rules ---
+    match /vacation_periods/{vacationId} {
+      // READ: Access is hierarchical
+      allow read: if request.auth != null &&
+                    (
+                      // 1. HR can read everything.
+                      isHR() ||
+                      // 2. An employee can read their own vacation records.
+                      request.auth.uid == resource.data.employee_id ||
+                      // 3. A manager can read their subordinates' records.
+                      // This checks if the logged-in user's ID matches the manager_id of the employee
+                      // associated with the vacation record.
+                      getUserData(resource.data.employee_id).manager_id == request.auth.uid
+                    );
+
+      // WRITE (Create, Update, Delete): Only HR can modify vacation periods.
+      // This is the core logic of our system.
+      allow write: if isHR();
+    }
+
+    // --- Departments Collection Rules ---
+    match /departments/{departmentId} {
+      // All authenticated users can read the list of departments.
+      allow read: if request.auth != null;
+      // Only HR can add or change departments.
+      allow write: if isHR();
     }
   }
 }
