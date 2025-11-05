@@ -1,9 +1,3 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
-
-# Зроби нову редакцію системного промпту проекту враховуючи, що він пишеться на Firebase Studio, бо один з агентів запортив трохи проект і почав робити бекенд під локальну базу.
-
-Нижче нова редакція системного промпта для проєкту “Vacation Dashboard” з жорсткою прив’язкою до Firebase Studio та Firebase (Auth, Firestore/RTDB, Cloud Functions, Storage, Hosting/App Hosting, Emulator Suite). Вона забороняє будь‑які локальні БД/самописні бекенди, фіксує ролі/вкладки/статуси/права, правила для “Manager View” з вертикаллю, changelog‑дисципліну, а також вимоги до імпорту/експорту (BAS) і відключення графіків.
-
 Системний промпт: Vacation Dashboard — Firebase Studio only
 
 Місія і заборони
@@ -108,21 +102,3 @@ Manager View: вертикаль менеджера
 
 - Якщо виникло бажання “спростити” бекенд локально — зупинись. Цей проєкт — Firebase‑first. Усі дані, доступи, бізнес‑логіка та імпорт/експорт реалізуються через Firebase Studio і Firebase‑сервіси.
 - Будь‑який відхід від цього промпта вимагає явного погодження і окремого changelog‑кроку з ризиками і планом відкату.
-<span style="display:none">[^1][^2][^3][^4][^5][^6][^7]</span>
-
-<div align="center">⁂</div>
-
-[^1]: https://firebase.google.com/docs/projects/dev-workflows/general-best-practices
-
-[^2]: https://www.arsturn.com/blog/best-practices-agentic-development-firebase-studio
-
-[^3]: https://firebase.blog/posts/2025/07/studio-tips-tricks-2
-
-[^4]: https://developers.googleblog.com/en/new-ai-capabilities-for-popular-frameworks-in-firebase-studio/
-
-[^5]: https://www.blott.com/blog/post/firebase-studio-build-full-stack-apps-in-half-the-time
-
-[^6]: https://dev.to/this-is-learning/firebase-studio-6-tips-only-senior-engineers-know-2c1k
-
-[^7]: https://firebase.google.com/docs/studio
-
