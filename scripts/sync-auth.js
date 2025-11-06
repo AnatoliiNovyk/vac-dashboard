@@ -4,7 +4,7 @@ const admin = require('firebase-admin');
 // Встановлюємо змінні середовища, щоб Admin SDK гарантовано
 // підключився до локальних емуляторів. Використовуємо IP-адресу напряму,
 // щоб уникнути проблем з резолвінгом `localhost`.
-process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
+process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8085';
 process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
 
 console.log('Змінні середовища для емуляторів встановлено:');
@@ -12,7 +12,7 @@ console.log(`FIRESTORE_EMULATOR_HOST=${process.env.FIRESTORE_EMULATOR_HOST}`);
 console.log(`FIREBASE_AUTH_EMULATOR_HOST=${process.env.FIREBASE_AUTH_EMULATOR_HOST}`);
 
 // --- Ініціалізація Admin SDK ---
-admin.initializeApp({ projectId: 'vacation-dashboard-local' });
+admin.initializeApp({ projectId: 'vacation-dashboard-06562-e46b1' });
 
 const db = admin.firestore();
 const auth = admin.auth();

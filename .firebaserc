@@ -1,5 +1,7 @@
 {
-  "projects": {},
+  "projects": {
+    "default": "vacation-dashboard-06562-e46b1"
+  },
   "targets": {},
   "etags": {}
 }

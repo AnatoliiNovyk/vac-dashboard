@@ -2,8 +2,8 @@
 // Self-executing function to encapsulate Firebase setup and app logic
 (function() {
     // --- Firebase Initialization with Modular SDKs ---
-    // Note: Replace with your actual Firebase config
-    const firebaseConfig = {
+    // Використовуємо window.firebaseConfig, якщо він є
+    const firebaseConfig = window.firebaseConfig || {
         apiKey: "your-api-key",
         authDomain: "your-auth-domain",
         projectId: "your-project-id",
@@ -23,9 +23,9 @@
     if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
         console.log("РОБОТА В РЕЖИМІ ЛОКАЛЬНОЇ РОЗРОБКИ: Підключення до емуляторів...");
         
-        firebase.auth().useEmulator("http://localhost:9099");
-        firebase.firestore().useEmulator("localhost", 8080);
-        firebase.functions().useEmulator("localhost", 5001);
+    firebase.auth().useEmulator("http://localhost:9099");
+    firebase.firestore().useEmulator("localhost", 8085);
+    firebase.functions().useEmulator("localhost", 5001);
         
         console.log("Auth, Firestore та Functions SDK підключено до емуляторів.");
     }
@@ -186,9 +186,39 @@
         await applyFilters();
     }
 
-    async function setupTabs() {
-      // This function remains the same
-    }
+        async function setupTabs() {
+            // Визначаємо вкладки згідно ролі
+            const roleFlags = appState.currentUser?.roleFlags || {};
+            const tabsNav = elements.tabsNav;
+            if (!tabsNav) return;
+            tabsNav.innerHTML = '';
+
+            let tabs = [];
+            if (roleFlags.is_hr && roleFlags.is_manager) {
+                // HR-менеджер: HR, Manager, My View
+                tabs = ['HR', 'Manager', 'My View'];
+            } else if (roleFlags.is_hr) {
+                // HR: HR, My View
+                tabs = ['HR', 'My View'];
+            } else if (roleFlags.is_manager) {
+                // Manager: Manager, My View
+                tabs = ['Manager', 'My View'];
+            } else {
+                // Employee: My View
+                tabs = ['My View'];
+            }
+
+            tabs.forEach(tab => {
+                const tabEl = document.createElement('button');
+                tabEl.className = 'tab-btn';
+                tabEl.textContent = tab;
+                tabEl.onclick = () => {
+                    appState.currentTab = tab;
+                    rerenderUI();
+                };
+                tabsNav.appendChild(tabEl);
+            });
+        }
 
     // Include all other necessary UI and helper functions here...
     // e.g., updateUserInfo, populateFilterDropdowns, applyFilters, getTabsForCurrentUser, etc.

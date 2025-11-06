@@ -1,12 +1,21 @@
 const admin = require('firebase-admin');
 
 // Point to the Firestore emulator
-process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
+process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8085';
 
 // Initialize the app with a consistent project ID
-admin.initializeApp({ projectId: 'vacation-dashboard-local' });
+admin.initializeApp({ projectId: 'vacation-dashboard-06562-e46b1' });
 
 const db = admin.firestore();
+
+// Тестові департаменти
+const departments = [
+  { name: 'HR' },
+  { name: 'IT' },
+  { name: 'Sales' },
+  { name: 'Finance' },
+  { name: 'Marketing' }
+];
 
 // Demo data: 25 employees
 const employees = [
@@ -37,35 +46,40 @@ const employees = [
   { name: 'Михайло', surname: 'Петров', tax_id: '2727272727', is_hr: false, is_manager: true },
 ];
 
+
 async function seedDatabase() {
   try {
     console.log('Starting to seed data into Firestore...');
 
+    // Додаємо департаменти
+    const depBatch = db.batch();
+    departments.forEach((dep) => {
+      const docRef = db.collection('departments').doc(dep.name);
+      depBatch.set(docRef, dep);
+    });
+    await depBatch.commit();
+    console.log('✅ Successfully seeded departments into the \'departments\' collection.');
+
+    // Додаємо співробітників з випадковим департаментом
     const batch = db.batch();
     let count = 0;
-
     employees.forEach((employee) => {
-      // Use a consistent UID based on the tax_id
       const docId = `uid_${employee.tax_id}`;
       const docRef = db.collection('employees').doc(docId);
-
-      // Construct the roleFlags object as expected by the cloud function
       const roleFlags = {
         is_hr: employee.is_hr || false,
         is_manager: employee.is_manager || false,
       };
-
       const employeeData = {
         name: employee.name,
         surname: employee.surname,
         tax_id: employee.tax_id,
-        roleFlags: roleFlags, // Add the roleFlags object
+        roleFlags: roleFlags,
+        department: departments[Math.floor(Math.random() * departments.length)].name
       };
-
       batch.set(docRef, employeeData);
       count++;
     });
-
     await batch.commit();
     console.log(`✅ Successfully seeded ${count} employee records into the 'employees' collection.`);
 
