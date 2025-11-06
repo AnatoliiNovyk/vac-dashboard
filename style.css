@@ -1288,6 +1288,144 @@ select.form-control {
   color: var(--color-text);
 }
 
+/* Vacation manager modal */
+.vacation-manager {
+  width: min(720px, 94vw);
+}
+
+.vacation-manager__employee {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-bottom: var(--space-20);
+}
+
+.vacation-manager__employee-name {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.vacation-manager__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.vacation-manager__section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.vacation-periods-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.vacation-periods-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.vacation-period-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--color-card-border);
+  border-radius: var(--radius-base);
+  background-color: var(--color-surface);
+}
+
+.vacation-period-row--error {
+  border-color: rgba(var(--color-error-rgb), 0.4);
+  box-shadow: inset 0 0 0 1px rgba(var(--color-error-rgb), 0.2);
+}
+
+.vacation-period-row-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-16);
+}
+
+.vacation-period-field label {
+  display: block;
+  margin-bottom: var(--space-6);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.vacation-period-input {
+  width: 100%;
+}
+
+.vacation-period-days {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.vacation-period-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.vacation-period-row-error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  line-height: var(--line-height-normal);
+}
+
+.vacation-periods-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.vacation-periods-limit--exceeded {
+  color: var(--color-error);
+  font-weight: var(--font-weight-medium);
+}
+
+.vacation-manager__message {
+  margin-top: var(--space-16);
+  padding: var(--space-12);
+  border-radius: var(--radius-base);
+  border: 1px solid transparent;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.vacation-manager__message--error {
+  color: var(--color-error);
+  background-color: rgba(var(--color-error-rgb), 0.08);
+  border-color: rgba(var(--color-error-rgb), 0.2);
+}
+
+.vacation-manager__message--warning {
+  color: var(--color-warning);
+  background-color: rgba(var(--color-warning-rgb), 0.08);
+  border-color: rgba(var(--color-warning-rgb), 0.2);
+}
+
+@media (max-width: 640px) {
+  .vacation-period-row {
+    padding: var(--space-12);
+  }
+
+  .vacation-period-row-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .vacation-manager__section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   .content-area {

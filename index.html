@@ -20,6 +20,51 @@
         </div>
     </header>
 
+
+        <!-- Vacation Manager Modal -->
+        <div id="vacation-manager-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="vacation-manager-title">
+            <div class="modal-content vacation-manager">
+                <div class="modal-header">
+                    <h3 id="vacation-manager-title">Періоди відпусток</h3>
+                    <button type="button" id="vacation-manager-close" class="modal-close" aria-label="Закрити">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="vacation-manager-form">
+                    <div class="modal-body">
+                        <div class="vacation-manager__employee">
+                            <label for="vacation-manager-employee-select" class="form-label">Співробітник</label>
+                            <select id="vacation-manager-employee-select" class="form-control hidden"></select>
+                            <div id="vacation-manager-employee-name" class="vacation-manager__employee-name">—</div>
+                        </div>
+                        <div class="vacation-manager__section">
+                            <div class="vacation-manager__section-header">
+                                <h4>Періоди</h4>
+                                <button type="button" id="vacation-period-add" class="btn btn--secondary btn--small">
+                                    <i class="fas fa-plus"></i>
+                                    Додати період
+                                </button>
+                            </div>
+                            <div id="vacation-periods-list" class="vacation-periods-list"></div>
+                            <div id="vacation-periods-empty" class="vacation-periods-empty">Періоди ще не додано.</div>
+                            <div class="vacation-periods-summary">
+                                <span id="vacation-periods-total" class="vacation-periods-total">Сумарно: 0 дн.</span>
+                                <span id="vacation-periods-limit" class="vacation-periods-limit"></span>
+                            </div>
+                        </div>
+                        <div id="vacation-modal-error" class="vacation-manager__message vacation-manager__message--error hidden"></div>
+                        <div id="vacation-modal-warning" class="vacation-manager__message vacation-manager__message--warning hidden"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="vacation-modal-cancel" class="btn btn--secondary">Скасувати</button>
+                        <button type="submit" id="vacation-modal-save" class="btn btn--primary">
+                            <i class="fas fa-save"></i>
+                            Зберегти
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     <!-- Main Content -->
     <main class="main-content">
         <div class="container">

@@ -44,8 +44,17 @@ exports.signInWithTaxId = functions.https.onCall(async (data, context) => {
     const uid = userDoc.id;
     const flags = userDoc.get('roleFlags') || {}; // Get roles, default to empty object
 
-    console.log(`[Function] Found user with UID: ${uid}. Setting custom claims:`, flags);
-    await auth.setCustomUserClaims(uid, flags);
+    const normalizedClaims = {
+      isHR: Boolean(flags.isHR ?? flags.is_hr),
+      is_hr: Boolean(flags.isHR ?? flags.is_hr),
+      isManager: Boolean(flags.isManager ?? flags.is_manager),
+      is_manager: Boolean(flags.isManager ?? flags.is_manager),
+      isHRHead: Boolean(flags.isHRHead ?? flags.is_hr_head ?? flags.is_hr_manager),
+      is_hr_head: Boolean(flags.isHRHead ?? flags.is_hr_head ?? flags.is_hr_manager)
+    };
+
+    console.log(`[Function] Found user with UID: ${uid}. Setting custom claims:`, normalizedClaims);
+    await auth.setCustomUserClaims(uid, normalizedClaims);
 
     console.log(`[Function] Creating custom token for UID: ${uid}.`);
     const customToken = await auth.createCustomToken(uid);
