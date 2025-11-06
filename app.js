@@ -743,13 +743,7 @@
 			elements.vacationModalSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Збереження...';
 		}
 		commitModalChanges().then(() => {
-			renderModalPeriods();
-			updateModalSummary();
-			renderModalWarnings();
-			updateModalSaveState();
-			if (elements.vacationModalSave) {
-				elements.vacationModalSave.innerHTML = '<i class="fas fa-save"></i> Зберегти';
-			}
+			closeVacationManagerModal(true);
 		}).catch(error => {
 			console.error("Не вдалося зберегти періоди відпустки:", error);
 			if (elements.vacationModalError) {
@@ -759,6 +753,7 @@
 		}).finally(() => {
 			if (elements.vacationModalSave) {
 				elements.vacationModalSave.disabled = false;
+				elements.vacationModalSave.innerHTML = '<i class="fas fa-save"></i> Зберегти';
 			}
 		});
 	}
