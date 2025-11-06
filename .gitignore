@@ -9,3 +9,4 @@ node_modules/
 
 # IDE-specific files
 .idx/
+firebase-debug.log

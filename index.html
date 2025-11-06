@@ -52,16 +52,46 @@
                         <span id="current-user-name">Користувач</span>
                         <span id="current-user-role" class="user-role-badge">Роль</span>
                     </div>
-                    <div class="user-stats">
-                        <!-- Stats here -->
+                    <div class="user-stats stats-grid" id="stats-grid">
+                        <!-- Cards for stats will be rendered here -->
                     </div>
                 </div>
                 <!-- Tabs Navigation -->
                 <nav id="tabs-nav" class="tabs-nav"></nav>
-                <!-- Tab Content -->
-                <div id="tab-content" class="tab-content"></div>
+                <!-- Filters Section -->
+                <section class="filters-section" id="filters-section">
+                    <div class="filters-grid" id="filters-grid">
+                        <!-- Filter controls will be rendered here -->
+                    </div>
+                </section>
+                <!-- Content Area: Calendar + Table -->
+                <div class="content-area">
+                    <!-- Calendar Section -->
+                    <section class="calendar-section" id="calendar-section">
+                        <div class="calendar-header">
+                            <h3>Календар відпусток</h3>
+                            <div class="calendar-controls" id="calendar-controls"></div>
+                        </div>
+                        <div id="vacation-calendar"></div>
+                        <div class="calendar-legend" id="calendar-legend"></div>
+                    </section>
+                    <!-- Table Section -->
+                    <section class="table-section" id="table-section">
+                        <div class="table-header">
+                            <h3 id="table-title">Таблиця співробітників</h3>
+                        </div>
+                        <div class="table-container">
+                            <table class="vacations-table" id="vacations-table">
+                                <thead id="table-head"></thead>
+                                <tbody id="table-body"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+                <!-- Tab Content (legacy, for compatibility) -->
+                <div id="tab-content" class="tab-content" style="display:none;"></div>
                 <!-- Role Test Button -->
-                <button id="role-test-btn" class="btn btn--secondary" style="margin-top:16px;">Тест ролі</button>
+                <button id="role-test-btn" class="btn btn--secondary mt-16">Тест ролі</button>
             </div>
         </div>
     </main>

@@ -109,37 +109,38 @@
     }
 
     async function initializeApp(authUser) {
-      try {
-        showLoadingState();
-        
-        const userDoc = await db.collection('employees').doc(authUser.uid).get();
-        if (!userDoc.exists) {
-            throw new Error("Ваш профіль співробітника не знайдено в базі даних.");
-        }
-        appState.currentUser = { id: userDoc.id, ...userDoc.data() };
+            try {
+                showLoadingState();
+                const userDoc = await db.collection('employees').doc(authUser.uid).get();
+                if (!userDoc.exists) {
+                        throw new Error("Ваш профіль співробітника не знайдено в базі даних.");
+                }
+                appState.currentUser = { id: userDoc.id, ...userDoc.data() };
 
-        const [departmentsSnap, allEmployeesSnap] = await Promise.all([
-          db.collection('departments').get(),
-          db.collection('employees').get()
-        ]);
+                const [departmentsSnap, allEmployeesSnap] = await Promise.all([
+                    db.collection('departments').get(),
+                    db.collection('employees').get()
+                ]);
 
-        appData.departments = departmentsSnap.docs.map(doc => doc.data().name);
-        appData.employees = allEmployeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                appData.departments = departmentsSnap.docs.map(doc => doc.data().name);
+                appData.employees = allEmployeesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        console.log(`Завантажено: ${appData.employees.length} співробітників, ${appData.departments.length} департаментів.`);
+                console.log('[DEBUG] Завантажено співробітників:', appData.employees);
+                console.log('[DEBUG] Завантажено департаменти:', appData.departments);
+                console.log('[DEBUG] Поточний користувач:', appState.currentUser);
 
-        showDashboardState();
-        await setupTabs(); 
+                showDashboardState();
+                await setupTabs(); 
 
-        appState.isInitialized = true;
-        console.log("Ініціалізація успішно завершена.");
-        
-        setupRealtimeListeners();
+                appState.isInitialized = true;
+                console.log("Ініціалізація успішно завершена.");
 
-      } catch (error) {
-        console.error("Критична помилка під час ініціалізації додатку:", error);
-        auth.signOut();
-      }
+                setupRealtimeListeners();
+
+            } catch (error) {
+                console.error("Критична помилка під час ініціалізації додатку:", error);
+                auth.signOut();
+            }
     }
 
     function showLoadingState() {
@@ -225,18 +226,49 @@
     }
 
     function setupRealtimeListeners() {
-      const empListener = db.collection('employees').onSnapshot(snapshot => {
-        appData.employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (appState.isInitialized) rerenderUI();
-      }, err => console.error("Listener error (employees):", err));
-      appState.listeners.push(empListener);
+            const empListener = db.collection('employees').onSnapshot(snapshot => {
+                appData.employees = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                console.log('[DEBUG] employees loaded:', appData.employees.length);
+                rerenderUI();
+            }, err => console.error("Listener error (employees):", err));
+            appState.listeners.push(empListener);
     }
 
     async function rerenderUI() {
         if(!appState.currentUser) return;
-        updateUserInfo();
-        populateFilterDropdowns();
-        await applyFilters();
+        // Визначаємо роль
+        const roleFlags = appState.currentUser.roleFlags || {};
+        // Employee: тільки свої дані
+        if (!roleFlags.is_hr && !roleFlags.is_manager) {
+            // Приховати статистику, фільтри
+            const statsGrid = document.getElementById('stats-grid');
+            if (statsGrid) statsGrid.innerHTML = '';
+            const filtersGrid = document.getElementById('filters-grid');
+            if (filtersGrid) filtersGrid.innerHTML = '';
+            // Відобразити простий текст
+            if (elements.currentUserName) {
+                elements.currentUserName.textContent = appState.currentUser.name || '';
+            }
+            if (elements.currentUserRole) {
+                elements.currentUserRole.textContent = 'Employee';
+            }
+            renderEmployeeCalendarAndTable();
+        } else {
+            // HR/Manager: вкладки, фільтри, статистика, таблиці
+            if (elements.currentUserName) {
+                elements.currentUserName.textContent = appState.currentUser.name || '';
+            }
+            if (elements.currentUserRole) {
+                let roleText = '';
+                if (roleFlags.is_hr && roleFlags.is_manager) roleText = 'HR, Manager';
+                else if (roleFlags.is_hr) roleText = 'HR';
+                else if (roleFlags.is_manager) roleText = 'Manager';
+                elements.currentUserRole.textContent = roleText;
+            }
+            renderStatsGrid();
+            renderFiltersSection();
+            renderContentArea();
+        }
     }
 
         async function setupTabs() {
@@ -248,33 +280,31 @@
 
             let tabs = [];
             if (roleFlags.is_hr && roleFlags.is_manager) {
-                // HR-менеджер: HR, Manager, My View
                 tabs = ['HR', 'Manager', 'My View'];
             } else if (roleFlags.is_hr) {
-                // HR: HR, My View
                 tabs = ['HR', 'My View'];
             } else if (roleFlags.is_manager) {
-                // Manager: Manager, My View
                 tabs = ['Manager', 'My View'];
             } else {
-                // Employee: My View
                 tabs = ['My View'];
             }
 
-            tabs.forEach(tab => {
+            tabs.forEach((tab, idx) => {
                 const tabEl = document.createElement('button');
-                tabEl.className = 'tab-btn';
+                tabEl.className = 'tab-button' + (idx === 0 ? ' active' : '');
                 tabEl.textContent = tab;
                 tabEl.onclick = () => {
+                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    tabEl.classList.add('active');
                     appState.currentTab = tab;
-                    renderTabContent(tab);
+                    rerenderUI();
                 };
                 tabsNav.appendChild(tabEl);
             });
             // Відразу рендеримо контент для першої вкладки
             if (tabs.length > 0) {
                 appState.currentTab = tabs[0];
-                renderTabContent(tabs[0]);
+                rerenderUI();
             }
     // Рендер контенту для вкладок
     function renderTabContent(tab) {
@@ -400,6 +430,190 @@
         }
 
     // Include all other necessary UI and helper functions here...
+    // --- Advanced UI Rendering Functions ---
+    function renderStatsGrid() {
+        const statsGrid = document.getElementById('stats-grid');
+        if (!statsGrid) return;
+        // Example stats: total employees, on vacation, planned, at work
+        let employees = appData.employees;
+        if (appState.currentTab === 'Manager') {
+            employees = employees.filter(emp => emp.manager_id === appState.currentUser.id);
+        } else if (appState.currentTab === 'My View') {
+            employees = [appState.currentUser];
+        }
+        const total = employees.length;
+        const onVacation = employees.filter(e => e.status === 'У відпустці').length;
+        const planned = employees.filter(e => e.status === 'Заплановано').length;
+        const atWork = employees.filter(e => e.status === 'На роботі').length;
+        statsGrid.innerHTML = `
+            <div class="stat-card stat-card--total">
+                <div class="stat-card-icon"><i class="fas fa-users"></i></div>
+                <div class="stat-card-value">${total}</div>
+                <div class="stat-card-label">Всього співробітників</div>
+            </div>
+            <div class="stat-card stat-card--approved">
+                <div class="stat-card-icon"><i class="fas fa-plane-departure"></i></div>
+                <div class="stat-card-value">${onVacation}</div>
+                <div class="stat-card-label">У відпустці</div>
+            </div>
+            <div class="stat-card stat-card--pending">
+                <div class="stat-card-icon"><i class="fas fa-calendar-plus"></i></div>
+                <div class="stat-card-value">${planned}</div>
+                <div class="stat-card-label">Заплановано</div>
+            </div>
+            <div class="stat-card stat-card--info">
+                <div class="stat-card-icon"><i class="fas fa-briefcase"></i></div>
+                <div class="stat-card-value">${atWork}</div>
+                <div class="stat-card-label">На роботі</div>
+            </div>
+        `;
+    }
+
+    function renderFiltersSection() {
+        const filtersGrid = document.getElementById('filters-grid');
+        if (!filtersGrid) return;
+        // Only show filters for HR and Manager
+        if (appState.currentTab === 'HR' || appState.currentTab === 'Manager') {
+            const depOptions = appData.departments.map(dep => `<option value="${dep}">${dep}</option>`).join('');
+            const statusOptions = ['У відпустці', 'Заплановано', 'На роботі'].map(st => `<option value="${st}">${st}</option>`).join('');
+            filtersGrid.innerHTML = `
+                <div class="filter-group">
+                    <label for="filter-department" class="form-label">Департамент</label>
+                    <select id="filter-department" class="form-control">
+                        <option value="">Всі</option>
+                        ${depOptions}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filter-status" class="form-label">Статус</label>
+                    <select id="filter-status" class="form-control">
+                        <option value="">Всі</option>
+                        ${statusOptions}
+                    </select>
+                </div>
+            `;
+            setTimeout(() => {
+                document.getElementById('filter-department').onchange = rerenderUI;
+                document.getElementById('filter-status').onchange = rerenderUI;
+            }, 0);
+        } else {
+            filtersGrid.innerHTML = '';
+        }
+    }
+
+    function renderContentArea() {
+        // For Employee (My View), show calendar and table for self
+        if (appState.currentTab === 'My View') {
+            renderEmployeeCalendarAndTable();
+        } else {
+            renderCalendarSection();
+            renderTableSection();
+        }
+    }
+
+    function renderEmployeeCalendarAndTable() {
+        // Render calendar section
+        const calendar = document.getElementById('vacation-calendar');
+        if (calendar) {
+            const emp = appState.currentUser;
+            const periods = (window.vacationPeriods || []).filter(vp => vp.employee_id === emp.id);
+            if (!periods.length) {
+                calendar.innerHTML = '<em>Відпусток не знайдено.</em>';
+            } else {
+                calendar.innerHTML = `<ul>${periods.map(vp => `<li>${vp.start_date} — ${vp.end_date} (${vp.days} днів)</li>`).join('')}</ul>`;
+            }
+        }
+        // Render table section
+        const tableTitle = document.getElementById('table-title');
+        const tableHead = document.getElementById('table-head');
+        const tableBody = document.getElementById('table-body');
+        if (tableTitle && tableHead && tableBody) {
+            tableTitle.textContent = 'Мої відпустки';
+            tableHead.innerHTML = `<tr>
+                <th>Період</th>
+                <th>Днів</th>
+                <th>Тип</th>
+                <th>Менеджер</th>
+            </tr>`;
+            const emp = appState.currentUser;
+            const periods = (window.vacationPeriods || []).filter(vp => vp.employee_id === emp.id);
+            if (!periods.length) {
+                tableBody.innerHTML = `<tr><td colspan="4"><em>Відпусток не знайдено.</em></td></tr>`;
+            } else {
+                tableBody.innerHTML = periods.map(vp => `
+                    <tr>
+                        <td>${vp.start_date} — ${vp.end_date}</td>
+                        <td>${vp.days}</td>
+                        <td>${vp.type || ''}</td>
+                        <td>${getManagerName(vp.manager_id) || ''}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // Допоміжна функція для пошуку імені менеджера
+        function getManagerName(managerId) {
+            if (!managerId) return '';
+            const manager = appData.employees.find(e => e.id == managerId);
+            return manager ? manager.name : '';
+        }
+    }
+
+    function renderCalendarSection() {
+        const calendar = document.getElementById('vacation-calendar');
+        if (!calendar) return;
+        let employee = appState.currentUser;
+        if (appState.currentTab === 'Manager') {
+            // Show nothing or summary for manager
+            calendar.innerHTML = '<em>Календар доступний лише для My View.</em>';
+            return;
+        }
+        // My View: show employee's vacation periods
+        const periods = (window.vacationPeriods || []).filter(vp => vp.employee_id === employee.id);
+        if (!periods.length) {
+            calendar.innerHTML = '<em>Відпусток не знайдено.</em>';
+            return;
+        }
+        calendar.innerHTML = `<ul>${periods.map(vp => `<li>${vp.start_date} — ${vp.end_date} (${vp.days} днів)</li>`).join('')}</ul>`;
+    }
+
+    function renderTableSection() {
+        const tableTitle = document.getElementById('table-title');
+        const tableHead = document.getElementById('table-head');
+        const tableBody = document.getElementById('table-body');
+        if (!tableTitle || !tableHead || !tableBody) return;
+        let employees = appData.employees;
+        if (appState.currentTab === 'Manager') {
+            employees = employees.filter(emp => emp.manager_id === appState.currentUser.id);
+        } else if (appState.currentTab === 'My View') {
+            employees = [appState.currentUser];
+        }
+        // Apply filters
+        if (appState.currentTab === 'HR' || appState.currentTab === 'Manager') {
+            const dep = document.getElementById('filter-department')?.value;
+            const status = document.getElementById('filter-status')?.value;
+            if (dep) employees = employees.filter(emp => emp.department === dep);
+            if (status) employees = employees.filter(emp => emp.status === status);
+        }
+        // Table columns
+        tableTitle.textContent = appState.currentTab === 'HR' ? 'HR View' : appState.currentTab === 'Manager' ? 'Manager View' : 'My View';
+        tableHead.innerHTML = `<tr><th>Ім'я</th><th>Відділ</th><th>Залишок</th><th>Статус</th></tr>`;
+        tableBody.innerHTML = employees.map(emp => `
+            <tr>
+                <td>${emp.name} ${emp.surname || ''}</td>
+                <td>${emp.department || ''}</td>
+                <td>${(emp.total_vacation_days !== undefined && emp.used_vacation_days !== undefined) ? (emp.total_vacation_days - emp.used_vacation_days) : ''}</td>
+                <td><span class="status ${getStatusClass(emp.status)}">${emp.status || ''}</span></td>
+            </tr>
+        `).join('');
+    }
+
+    function getStatusClass(status) {
+        if (status === 'У відпустці') return 'status--approved';
+        if (status === 'Заплановано') return 'status--pending';
+        if (status === 'На роботі') return 'status--info';
+        return '';
+    }
     // e.g., updateUserInfo, populateFilterDropdowns, applyFilters, getTabsForCurrentUser, etc.
 
 })();
