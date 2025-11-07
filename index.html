@@ -127,14 +127,25 @@
                         </div>
                         <div class="table-container">
                             <table class="vacations-table" id="vacations-table">
-                                <thead id="table-head"></thead>
+                                <thead id="table-head">
+                                    <tr class="table-head-template">
+                                        <th>Ім'я</th>
+                                        <th>Підрозділ</th>
+                                        <th>Посада</th>
+                                        <th>Статус</th>
+                                        <th>Ближча відпустка</th>
+                                        <th class="col-earned">Нарах.</th>
+                                        <th>Залишок днів</th>
+                                        <th>Дії</th>
+                                    </tr>
+                                </thead>
                                 <tbody id="table-body"></tbody>
                             </table>
                         </div>
                     </section>
                 </div>
                 <!-- Tab Content (legacy, for compatibility) -->
-                <div id="tab-content" class="tab-content" style="display:none;"></div>
+                <div id="tab-content" class="tab-content"></div>
                 <!-- Role Test Button -->
                 <button id="role-test-btn" class="btn btn--secondary mt-16">Тест ролі</button>
             </div>

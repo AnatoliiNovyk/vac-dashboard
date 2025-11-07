@@ -158,6 +158,61 @@
 		return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
 	}
 
+	function formatDateHuman(date) {
+		if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+			return "";
+		}
+		const day = String(date.getDate()).padStart(2, "0");
+		const month = String(date.getMonth() + 1).padStart(2, "0");
+		const year = date.getFullYear();
+		return `${day}.${month}.${year}`;
+	}
+
+	// Normalizes Firestore timestamps, ISO strings, or epoch numbers to Date.
+	function parseTimestampToDate(value) {
+		if (!value) {
+			return null;
+		}
+		if (value instanceof Date) {
+			return Number.isNaN(value.getTime()) ? null : value;
+		}
+		if (typeof value === "number") {
+			const date = new Date(value);
+			return Number.isNaN(date.getTime()) ? null : date;
+		}
+		if (typeof value === "string") {
+			const date = new Date(value);
+			return Number.isNaN(date.getTime()) ? null : date;
+		}
+		if (typeof value.toDate === "function") {
+			const date = value.toDate();
+			return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
+		}
+		if (typeof value.seconds === "number") {
+			const milliseconds = value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1e6);
+			const date = new Date(milliseconds);
+			return Number.isNaN(date.getTime()) ? null : date;
+		}
+		return null;
+	}
+
+	function getAllocationInfo(allocation) {
+		const total = typeof allocation?.totalAllocatedDays === "number" && Number.isFinite(allocation.totalAllocatedDays)
+			? allocation.totalAllocatedDays
+			: null;
+		const display = total !== null ? String(total) : "—";
+		const updatedAtDate = parseTimestampToDate(allocation?.updatedAt);
+		if (!updatedAtDate) {
+			return { display, tooltip: "" };
+		}
+		const tooltipParts = [`оновлено: ${formatDateHuman(updatedAtDate)}`];
+		const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+		if (Date.now() - updatedAtDate.getTime() > thirtyDaysMs) {
+			tooltipParts.push("дані можуть бути застарілими");
+		}
+		return { display, tooltip: tooltipParts.join(". ") };
+	}
+
 	function computeStatus(periods, today = new Date()) {
 		if (!Array.isArray(periods) || periods.length === 0) {
 			return "На роботі";
@@ -804,6 +859,14 @@
 	function normalizeEmployeeDoc(doc) {
 		const data = doc.data() || {};
 		const roleFlags = normalizeRoleFlags(data.roleFlags || {});
+		const rawAllocation = data.allocation || {};
+		const allocation = {
+			...rawAllocation,
+			totalAllocatedDays: typeof rawAllocation.totalAllocatedDays === "number" && Number.isFinite(rawAllocation.totalAllocatedDays)
+				? rawAllocation.totalAllocatedDays
+				: null,
+			updatedAt: rawAllocation.updatedAt ?? null
+		};
 		return {
 			id: doc.id,
 			fullName: data.full_name || `${data.name || ""} ${data.surname || ""}`.trim(),
@@ -820,6 +883,7 @@
 			isHR: roleFlags.isHR,
 			isManager: roleFlags.isManager,
 			isHRHead: roleFlags.isHRHead,
+			allocation,
 			raw: data
 		};
 	}
@@ -1099,10 +1163,11 @@
 		departmentGroup.appendChild(departmentSelect);
 		elements.filtersGrid.appendChild(departmentGroup);
 
+		let statusSelect = null;
 		if (userDoc.isHR || userDoc.isHRHead) {
 			const statusGroup = createElement("div", "filter-group");
 			const statusLabel = createElement("label", "filter-label", "Статус");
-			const statusSelect = createElement("select", "filter-select");
+			statusSelect = createElement("select", "filter-select");
 			const statuses = ["", "У відпустці", "Заплановано", "На роботі"];
 			statuses.forEach(value => {
 				const option = createElement("option", "", value || "Всі");
@@ -1119,6 +1184,24 @@
 			statusGroup.appendChild(statusLabel);
 			statusGroup.appendChild(statusSelect);
 			elements.filtersGrid.appendChild(statusGroup);
+		}
+
+		const shouldRenderReset = userDoc.isHR || userDoc.isHRHead || userDoc.isManager;
+		if (shouldRenderReset) {
+			const resetGroup = createElement("div", "filter-group filter-group--reset");
+			const resetButton = createElement("button", "btn btn--secondary filter-reset-button", "Скинути фільтри");
+			resetButton.type = "button";
+			resetButton.addEventListener("click", () => {
+				appState.filters.department = "";
+				appState.filters.status = "";
+				departmentSelect.value = "";
+				if (statusSelect) {
+					statusSelect.value = "";
+				}
+				rerenderUI(appState.currentTab);
+			});
+			resetGroup.appendChild(resetButton);
+			elements.filtersGrid.appendChild(resetGroup);
 		}
 	}
 
@@ -1191,15 +1274,25 @@
 		if (!employees || employees.length === 0) {
 			const emptyRow = createElement("tr", "table-row-empty");
 			const cell = createElement("td", "table-cell-empty", "Немає записів для відображення.");
-			cell.colSpan = canManageVacations ? 7 : 6;
+			const baseColumns = 7;
+			cell.colSpan = canManageVacations ? baseColumns + 1 : baseColumns;
 			emptyRow.appendChild(cell);
 			elements.tableBody.appendChild(emptyRow);
 			return;
 		}
 
 		const headRow = createElement("tr");
-		["Ім'я", "Підрозділ", "Посада", "Статус", "Ближча відпустка", "Залишок днів"].forEach(label => {
-			headRow.appendChild(createElement("th", "", label));
+		const headCells = [
+			{ label: "Ім'я" },
+			{ label: "Підрозділ" },
+			{ label: "Посада" },
+			{ label: "Статус" },
+			{ label: "Ближча відпустка" },
+			{ label: "Нарах.", className: "col-earned" },
+			{ label: "Залишок днів" }
+		];
+		headCells.forEach(cell => {
+			headRow.appendChild(createElement("th", cell.className || "", cell.label));
 		});
 		if (canManageVacations) {
 			headRow.appendChild(createElement("th", "", "Дії"));
@@ -1222,8 +1315,18 @@
 
 			row.appendChild(createElement("td", "", upcomingPeriod ? formatRange(upcomingPeriod.start_date, upcomingPeriod.end_date) : "—"));
 
-			const balance = (employee.total_vacation_days || 0) - (employee.used_vacation_days || 0);
-			row.appendChild(createElement("td", "", String(balance)));
+			const allocationInfo = getAllocationInfo(employee.allocation);
+			const allocationCell = createElement("td", "col-earned", allocationInfo.display);
+			if (allocationInfo.tooltip) {
+				allocationCell.title = allocationInfo.tooltip;
+			}
+			row.appendChild(allocationCell);
+
+			const totalDays = Number(employee.total_vacation_days ?? 0);
+			const usedDays = Number(employee.used_vacation_days ?? 0);
+			const balanceValue = totalDays - usedDays;
+			const balanceDisplay = Number.isFinite(balanceValue) ? String(balanceValue) : "—";
+			row.appendChild(createElement("td", "", balanceDisplay));
 
 			if (canManageVacations) {
 				const actionsCell = createElement("td", "actions-column");

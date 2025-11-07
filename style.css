@@ -1004,6 +1004,15 @@ select.form-control {
   gap: var(--space-8);
 }
 
+.filter-group--reset {
+  align-self: end;
+}
+
+.filter-reset-button {
+  align-self: flex-end;
+  min-width: 160px;
+}
+
 /* Content Area */
 .content-area {
   display: grid;
@@ -1152,6 +1161,12 @@ select.form-control {
   background-color: var(--color-bg-1);
 }
 
+.col-earned {
+  white-space: nowrap;
+  text-align: right;
+  width: 64px;
+}
+
 .vacation-type {
   display: inline-flex;
   align-items: center;
@@ -1202,6 +1217,10 @@ select.form-control {
 
 .btn--reject:hover {
   background-color: var(--color-red-500);
+}
+
+.tab-content {
+  display: none;
 }
 
 /* Modal */
