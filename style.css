@@ -1373,9 +1373,10 @@ select.form-control {
 
 .action-buttons {
   display: flex;
-  gap: var(--space-6);
+  gap: var(--space-8);
   align-items: center;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .action-buttons button {
@@ -1394,6 +1395,30 @@ select.form-control {
 
 .btn--icon-only i {
   pointer-events: none;
+}
+
+.btn--action-icon {
+  background-color: var(--color-charcoal-800);
+  color: var(--color-cream-50);
+  border: 1px solid rgba(var(--color-brown-600-rgb), 0.35);
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.btn--action-icon i {
+  font-size: 16px;
+}
+
+.btn--action-icon:hover {
+  background-color: var(--color-charcoal-700);
+  color: var(--color-cream-50);
+  box-shadow: 0 2px 6px rgba(var(--color-slate-900-rgb), 0.2);
+}
+
+.btn--action-icon:focus-visible {
+  background-color: var(--color-charcoal-700);
+  color: var(--color-cream-50);
+  box-shadow: var(--focus-ring), 0 2px 6px rgba(var(--color-slate-900-rgb), 0.2);
 }
 
 .btn--approve {

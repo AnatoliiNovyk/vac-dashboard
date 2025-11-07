@@ -1726,16 +1726,23 @@
 				const actionsWrapper = createElement("div", "action-buttons");
 				const infoButton = document.createElement("button");
 				infoButton.type = "button";
-				infoButton.className = "btn btn--secondary btn--icon-only";
-				infoButton.title = "Інфо";
-				infoButton.setAttribute("aria-label", `Переглянути інформацію: ${fullName || "співробітник"}`);
+				infoButton.className = "btn btn--action-icon btn--icon-only";
+				infoButton.title = "Інформація про співробітника";
+				infoButton.setAttribute("aria-label", `Інформація про співробітника: ${fullName || "співробітник"}`);
 				infoButton.setAttribute("aria-haspopup", "dialog");
 				infoButton.addEventListener("click", () => openEmployeeInfoModal(employee.id));
 				infoButton.appendChild(createElement("i", "fas fa-eye"));
-				infoButton.appendChild(createElement("span", "sr-only", "Інфо"));
-				const manageButton = createElement("button", "btn btn--secondary btn--small", "Періоди");
+				infoButton.appendChild(createElement("span", "sr-only", "Інформація"));
+
+				const manageButton = document.createElement("button");
 				manageButton.type = "button";
+				manageButton.className = "btn btn--action-icon btn--icon-only";
+				manageButton.title = "Відпусткові періоди";
+				manageButton.setAttribute("aria-label", "Відпусткові періоди");
+				manageButton.setAttribute("aria-haspopup", "dialog");
 				manageButton.addEventListener("click", () => openVacationManagerModal(employee));
+				manageButton.appendChild(createElement("i", "fas fa-pen-to-square"));
+				manageButton.appendChild(createElement("span", "sr-only", "Відпусткові періоди"));
 				actionsWrapper.appendChild(infoButton);
 				actionsWrapper.appendChild(manageButton);
 				actionsCell.appendChild(actionsWrapper);
