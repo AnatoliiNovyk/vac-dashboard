@@ -43,6 +43,7 @@
 
 	const modalState = {
 		employeeId: null,
+		employeeSnapshot: null,
 		periods: [],
 		originalPeriods: [],
 		errors: new Map(),
@@ -329,6 +330,7 @@
 
 	function resetModalState() {
 		modalState.employeeId = null;
+		modalState.employeeSnapshot = null;
 		modalState.periods = [];
 		modalState.originalPeriods = [];
 		modalState.errors = new Map();
@@ -446,7 +448,7 @@
 	function renderEmployeeSelector(userDoc) {
 		const select = elements.vacationModalEmployeeSelect;
 		const nameNode = elements.vacationModalEmployeeName;
-		const employee = getEmployeeById(modalState.employeeId);
+		const employee = getActiveModalEmployee();
 		if (select) {
 			clearNode(select);
 		}
@@ -630,6 +632,7 @@
 		}
 		appState.editingEmployeeId = employee.id;
 		modalState.employeeId = employee.id;
+		modalState.employeeSnapshot = { ...employee };
 		modalState.isReadOnly = !isHrUser(appState.currentUser);
 		const dataset = getVacationPeriodsForEmployees([employee.id]).map(clonePeriodForModal);
 		sortModalPeriods(dataset);
@@ -709,7 +712,7 @@
 		modalState.periods.push(newPeriod);
 		sortModalPeriods(modalState.periods);
 		calculateModalState();
-		updateModalLimitInfo(getEmployeeById(modalState.employeeId));
+		updateModalLimitInfo(getActiveModalEmployee());
 		renderModalPeriods();
 		updateModalSummary();
 		renderModalWarnings();
@@ -741,7 +744,7 @@
 		}
 		sortModalPeriods(modalState.periods);
 		calculateModalState();
-		updateModalLimitInfo(getEmployeeById(modalState.employeeId));
+		updateModalLimitInfo(getActiveModalEmployee());
 		renderModalPeriods();
 		updateModalSummary();
 		renderModalWarnings();
@@ -757,7 +760,7 @@
 		if (button.dataset.action === "delete") {
 			modalState.periods = modalState.periods.filter(item => item.id !== periodId);
 			calculateModalState();
-			updateModalLimitInfo(getEmployeeById(modalState.employeeId));
+			updateModalLimitInfo(getActiveModalEmployee());
 			renderModalPeriods();
 			updateModalSummary();
 			renderModalWarnings();
@@ -766,43 +769,45 @@
 	}
 
 	async function commitModalChanges() {
-		const employee = getEmployeeById(modalState.employeeId);
+		const employee = getEmployeeById(modalState.employeeId) || modalState.employeeSnapshot;
 		if (!employee) {
 			throw new Error("Профіль співробітника не знайдено.");
 		}
 		const collectionRef = db.collection("vacation_periods");
 		const user = appState.currentUser;
 		const now = firebase.firestore.FieldValue.serverTimestamp();
+		const batch = db.batch();
 		const persistedIds = new Set();
 
-		await db.runTransaction(async transaction => {
-			for (const period of modalState.periods) {
-				const docRef = period.refId ? collectionRef.doc(period.refId) : collectionRef.doc();
-				const payload = {
-					start_date: period.startDate,
-					end_date: period.endDate,
-					days: computeDays(period.startDate, period.endDate),
-					employee_id: modalState.employeeId,
-					manager_id: employee.manager_id || null,
-					updatedAt: now,
-					updatedBy: user?.id || null,
-					updatedByName: user?.fullName || user?.name || "",
-					lastAction: "manual_periods_update"
-				};
-				transaction.set(docRef, { ...payload, id: docRef.id }, { merge: true });
-				persistedIds.add(docRef.id);
-				if (!period.refId) {
-					period.refId = docRef.id;
-					period.id = docRef.id;
-				}
-			}
-			for (const original of modalState.originalPeriods) {
-				const docId = original.refId || original.id;
-				if (docId && !persistedIds.has(docId)) {
-					transaction.delete(collectionRef.doc(docId));
-				}
+		modalState.periods.forEach(period => {
+			const docRef = period.refId ? collectionRef.doc(period.refId) : collectionRef.doc();
+			const payload = {
+				start_date: period.startDate,
+				end_date: period.endDate,
+				days: computeDays(period.startDate, period.endDate),
+				employee_id: modalState.employeeId,
+				manager_id: employee.manager_id || null,
+				updatedAt: now,
+				updatedBy: user?.id || null,
+				updatedByName: user?.fullName || user?.name || "",
+				lastAction: "manual_periods_update"
+			};
+			batch.set(docRef, { ...payload, id: docRef.id }, { merge: true });
+			persistedIds.add(docRef.id);
+			if (!period.refId) {
+				period.refId = docRef.id;
+				period.id = docRef.id;
 			}
 		});
+
+		modalState.originalPeriods.forEach(original => {
+			const docId = original.refId || original.id;
+			if (docId && !persistedIds.has(docId)) {
+				batch.delete(collectionRef.doc(docId));
+			}
+		});
+
+		await batch.commit();
 		modalState.originalPeriods = modalState.periods.map(period => ({ ...period }));
 		modalState.isDirty = false;
 		calculateModalState();
@@ -856,9 +861,13 @@
 		commitModalChanges().then(() => {
 			closeVacationManagerModal(true);
 		}).catch(error => {
-			console.error("Не вдалося зберегти періоди відпустки:", error);
+			console.error("Не вдалося зберегти періоди відпустки:", error, {
+				employeeId: modalState.employeeId,
+				periodCount: modalState.periods.length
+			});
 			if (elements.vacationModalError) {
-				elements.vacationModalError.innerHTML = "Не вдалося зберегти зміни. Спробуйте ще раз.";
+				const extra = error && error.message ? `<br><small>${error.message}</small>` : "";
+				elements.vacationModalError.innerHTML = `Не вдалося зберегти зміни. Спробуйте ще раз.${extra}`;
 				toggleHidden(elements.vacationModalError, false);
 			}
 		}).finally(() => {
@@ -876,7 +885,7 @@
 		if (modalState.isDirty) {
 			return;
 		}
-		const employee = getEmployeeById(modalState.employeeId);
+		const employee = getEmployeeById(modalState.employeeId) || modalState.employeeSnapshot;
 		if (!employee) {
 			closeVacationManagerModal(true);
 			return;
@@ -992,6 +1001,10 @@
 
 	function getEmployeeById(id) {
 		return appData.employees.find(emp => emp.id === id) || null;
+	}
+
+	function getActiveModalEmployee() {
+		return getEmployeeById(modalState.employeeId) || modalState.employeeSnapshot || null;
 	}
 
 	function getVisibleTabs(userDoc) {
