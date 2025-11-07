@@ -1420,9 +1420,29 @@
 		if (filters.status) {
 			filtered = filtered.filter(emp => emp.computedStatus === filters.status);
 		}
-		if (tab === "Manager View" && userDoc.isManager && !userDoc.isHR && !userDoc.isHRHead) {
-			const teamIds = new Set(getManagerEmployees(userDoc.id).map(emp => emp.id));
-			filtered = filtered.filter(emp => teamIds.has(emp.id));
+		if (tab === "Manager View") {
+			const teamMembers = getManagerEmployees(userDoc.id);
+			const allowedIds = new Set(teamMembers.map(emp => emp.id));
+			allowedIds.add(userDoc.id);
+			filtered = filtered.filter(emp => allowedIds.has(emp.id));
+			if (userDoc.isHRHead) {
+				const userDepartments = new Set([
+					userDoc.department_id,
+					userDoc.department,
+					userDoc.departmentName
+				].map(value => (typeof value === "string" ? value.trim().toLowerCase() : "")).filter(Boolean));
+				filtered = filtered.filter(emp => {
+					const employeeDepartments = [
+						emp.department_id,
+						emp.department,
+						emp.departmentName
+					].map(value => (typeof value === "string" ? value.trim().toLowerCase() : "")).filter(Boolean);
+					if (employeeDepartments.length === 0) {
+						return false;
+					}
+					return employeeDepartments.some(token => userDepartments.has(token));
+				});
+			}
 		}
 		return filtered;
 	}
