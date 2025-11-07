@@ -16,6 +16,10 @@
                     <i class="fas fa-calendar-alt"></i>
                     Vacation Dashboard
                 </h1>
+                <button type="button" id="logout-btn" class="btn btn--secondary btn--sm header-logout-btn" aria-label="Вийти із профілю">
+                    <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
+                    <span class="header-logout-btn__label">Вийти</span>
+                </button>
             </div>
         </div>
     </header>
@@ -49,11 +53,17 @@
                             <div id="vacation-periods-empty" class="vacation-periods-empty">Періоди ще не додано.</div>
                             <div class="vacation-periods-summary">
                                 <span id="vacation-periods-total" class="vacation-periods-total">Сумарно: 0 дн.</span>
-                                <span id="vacation-periods-limit" class="vacation-periods-limit"></span>
+                                <div class="vacation-limit-field">
+                                    <label for="vacation-limit-input" class="form-label vacation-limit-label">Ліміт (днів)</label>
+                                    <input type="number" id="vacation-limit-input" class="form-control vacation-limit-input" min="0" step="1" inputmode="numeric" pattern="[0-9]*">
+                                    <div id="vacation-limit-error" class="vacation-limit-error hidden"></div>
+                                    <div id="vacation-periods-limit" class="vacation-limit-helper"></div>
+                                </div>
                             </div>
                         </div>
                         <div id="vacation-modal-error" class="vacation-manager__message vacation-manager__message--error hidden"></div>
                         <div id="vacation-modal-warning" class="vacation-manager__message vacation-manager__message--warning hidden"></div>
+                        <div id="vacation-modal-success" class="vacation-manager__message vacation-manager__message--success hidden"></div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" id="vacation-modal-cancel" class="btn btn--secondary">Скасувати</button>

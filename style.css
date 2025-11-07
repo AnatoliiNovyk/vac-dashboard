@@ -766,6 +766,34 @@ select.form-control {
   font-weight: var(--font-weight-bold);
 }
 
+.header-logout-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-16);
+  border-radius: var(--radius-base);
+  font-weight: var(--font-weight-medium);
+  box-shadow: none;
+  transition: background var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.header-logout-btn:hover {
+  background: rgba(var(--color-slate-500-rgb), 0.12);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.header-logout-btn i {
+  font-size: 0.9rem;
+}
+
+.header-logout-btn__label {
+  line-height: 1;
+}
+
 .role-selector {
   display: flex;
   align-items: center;
@@ -1421,6 +1449,11 @@ select.form-control {
   box-shadow: var(--focus-ring), 0 2px 6px rgba(var(--color-slate-900-rgb), 0.2);
 }
 
+.form-control--error {
+  border-color: rgba(var(--color-error-rgb), 0.6);
+  box-shadow: 0 0 0 1px rgba(var(--color-error-rgb), 0.25);
+}
+
 .btn--approve {
   background-color: var(--color-success);
   color: var(--color-btn-primary-text);
@@ -1722,6 +1755,38 @@ select.form-control {
   font-weight: var(--font-weight-medium);
 }
 
+.vacation-limit-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 220px;
+}
+
+.vacation-limit-label {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.vacation-limit-input {
+  max-width: 160px;
+}
+
+.vacation-limit-input--exceeded {
+  border-color: rgba(var(--color-error-rgb), 0.6);
+  box-shadow: 0 0 0 1px rgba(var(--color-error-rgb), 0.2);
+}
+
+.vacation-limit-error {
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+}
+
+.vacation-limit-helper {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
 .vacation-manager__message {
   margin-top: var(--space-16);
   padding: var(--space-12);
@@ -1741,6 +1806,12 @@ select.form-control {
   color: var(--color-warning);
   background-color: rgba(var(--color-warning-rgb), 0.08);
   border-color: rgba(var(--color-warning-rgb), 0.2);
+}
+
+.vacation-manager__message--success {
+  color: var(--color-success);
+  background-color: rgba(var(--color-success-rgb), 0.08);
+  border-color: rgba(var(--color-success-rgb), 0.2);
 }
 
 @media (max-width: 640px) {

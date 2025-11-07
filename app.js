@@ -54,12 +54,19 @@
 		isReadOnly: true,
 		totalDays: 0,
 		limitDays: 0,
-		limitLabel: ""
+		limitLabel: "",
+		limitInputValue: "",
+		limitOriginalValue: "",
+		limitDirty: false,
+		limitError: "",
+		manualLimitOverride: false
 	};
 
 	const infoModalState = {
 		employeeId: null
 	};
+
+	let modalSuccessTimer = null;
 
 	const appData = {
 		employees: [],
@@ -76,6 +83,7 @@
 		dashboard: document.getElementById("dashboard-container"),
 		currentUserName: document.getElementById("current-user-name"),
 		currentUserRole: document.getElementById("current-user-role"),
+		logoutBtn: document.getElementById("logout-btn"),
 		statsGrid: document.getElementById("stats-grid"),
 		tabsNav: document.getElementById("tabs-nav"),
 		filtersSection: document.getElementById("filters-section"),
@@ -98,8 +106,11 @@
 		vacationPeriodAddBtn: document.getElementById("vacation-period-add"),
 		vacationPeriodsTotal: document.getElementById("vacation-periods-total"),
 		vacationPeriodsLimit: document.getElementById("vacation-periods-limit"),
+		vacationLimitInput: document.getElementById("vacation-limit-input"),
+		vacationLimitError: document.getElementById("vacation-limit-error"),
 		vacationModalError: document.getElementById("vacation-modal-error"),
 		vacationModalWarning: document.getElementById("vacation-modal-warning"),
+		vacationModalSuccess: document.getElementById("vacation-modal-success"),
 		vacationModalSave: document.getElementById("vacation-modal-save"),
 		vacationModalCancel: document.getElementById("vacation-modal-cancel"),
 		employeeInfoModal: document.getElementById("employee-info-modal"),
@@ -339,6 +350,34 @@
 		element.classList.toggle("hidden", hidden);
 	}
 
+	function hideModalSuccess() {
+		if (modalSuccessTimer) {
+			clearTimeout(modalSuccessTimer);
+			modalSuccessTimer = null;
+		}
+		if (!elements.vacationModalSuccess) {
+			return;
+		}
+		elements.vacationModalSuccess.textContent = "";
+		toggleHidden(elements.vacationModalSuccess, true);
+	}
+
+	function showModalSuccess(message) {
+		if (!elements.vacationModalSuccess) {
+			return;
+		}
+		elements.vacationModalSuccess.textContent = message;
+		toggleHidden(elements.vacationModalSuccess, false);
+		if (modalSuccessTimer) {
+			clearTimeout(modalSuccessTimer);
+		}
+		modalSuccessTimer = window.setTimeout(() => {
+			if (!modalState.isDirty) {
+				hideModalSuccess();
+			}
+		}, 4000);
+	}
+
 	function isHrUser(userDoc) {
 		return Boolean(userDoc && (userDoc.isHR || userDoc.isHRHead));
 	}
@@ -357,6 +396,19 @@
 		modalState.totalDays = 0;
 		modalState.limitDays = 0;
 		modalState.limitLabel = "";
+		modalState.limitInputValue = "";
+		modalState.limitOriginalValue = "";
+		modalState.limitDirty = false;
+		modalState.limitError = "";
+		modalState.manualLimitOverride = false;
+		hideModalSuccess();
+		if (elements.vacationLimitInput) {
+			elements.vacationLimitInput.value = "";
+		}
+		if (elements.vacationLimitError) {
+			elements.vacationLimitError.textContent = "";
+			toggleHidden(elements.vacationLimitError, true);
+		}
 	}
 
 	function generateTempId() {
@@ -379,15 +431,33 @@
 		periods.sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
 	}
 
+	function getEmployeeLimitValue(employee) {
+		const allocationValue = Number(employee?.allocation?.totalAllocatedDays);
+		if (Number.isFinite(allocationValue) && allocationValue >= 0) {
+			return allocationValue;
+		}
+		const totalValue = Number(employee?.total_vacation_days);
+		if (Number.isFinite(totalValue) && totalValue >= 0) {
+			return totalValue;
+		}
+		return null;
+	}
+
 	function updateModalLimitInfo(employee) {
-		const totalDays = Number(employee?.total_vacation_days || modalState.limitDays || 0);
 		const usedDays = Number(employee?.used_vacation_days || 0);
-		modalState.limitDays = totalDays > 0 ? totalDays : 0;
-		const remaining = modalState.limitDays > 0 ? Math.max(modalState.limitDays - modalState.totalDays, 0) : 0;
-		if (modalState.limitDays > 0) {
-			modalState.limitLabel = `Ліміт: ${modalState.limitDays} дн. (залишилось ${remaining} дн., використано ${usedDays} дн.)`;
+		const limitValue = Number.isFinite(modalState.limitDays) ? modalState.limitDays : 0;
+		const remaining = limitValue > 0 ? Math.max(limitValue - modalState.totalDays, 0) : 0;
+		const manualNote = modalState.manualLimitOverride || employee?.allocation?.manualOverride
+			? "встановлено вручну HR"
+			: employee?.allocation?.source
+				? `імпортовано з ${employee.allocation.source}`
+				: "";
+		if (limitValue > 0) {
+			const note = manualNote ? ` — ${manualNote}` : "";
+			modalState.limitLabel = `Ліміт: ${limitValue} дн. (залишилось ${remaining} дн., використано ${usedDays} дн.)${note}`;
 		} else {
-			modalState.limitLabel = "Ліміт: не задано";
+			const note = manualNote ? ` — ${manualNote}` : "";
+			modalState.limitLabel = `Ліміт: не задано${note}`;
 		}
 	}
 
@@ -457,7 +527,8 @@
 		modalState.hasOverlap = validation.hasOverlap;
 		modalState.totalDays = validation.totalDays;
 		modalState.exceedsLimit = modalState.limitDays > 0 && modalState.totalDays > modalState.limitDays;
-		modalState.isDirty = !arePeriodsEqual(modalState.periods, modalState.originalPeriods);
+		const periodsDirty = !arePeriodsEqual(modalState.periods, modalState.originalPeriods);
+		modalState.isDirty = periodsDirty || modalState.limitDirty;
 	}
 
 	function renderEmployeeSelector(userDoc) {
@@ -567,6 +638,32 @@
 		if (elements.vacationPeriodsTotal) {
 			elements.vacationPeriodsTotal.textContent = `Сумарно: ${modalState.totalDays} дн.`;
 		}
+		if (elements.vacationLimitInput) {
+			const input = elements.vacationLimitInput;
+			if (input.value !== modalState.limitInputValue) {
+				input.value = modalState.limitInputValue;
+			}
+			input.disabled = modalState.isReadOnly;
+			input.readOnly = modalState.isReadOnly;
+			input.setAttribute("aria-disabled", modalState.isReadOnly ? "true" : "false");
+			input.setAttribute("aria-invalid", modalState.limitError ? "true" : "false");
+			input.classList.toggle("form-control--error", Boolean(modalState.limitError));
+			input.classList.toggle("vacation-limit-input--exceeded", Boolean(modalState.exceedsLimit && modalState.limitDays > 0));
+			if (modalState.isReadOnly) {
+				input.title = "Редагування доступне лише HR";
+			} else {
+				input.removeAttribute("title");
+			}
+		}
+		if (elements.vacationLimitError) {
+			if (modalState.limitError) {
+				elements.vacationLimitError.textContent = modalState.limitError;
+				toggleHidden(elements.vacationLimitError, false);
+			} else {
+				elements.vacationLimitError.textContent = "";
+				toggleHidden(elements.vacationLimitError, true);
+			}
+		}
 		if (elements.vacationPeriodsLimit) {
 			elements.vacationPeriodsLimit.textContent = modalState.limitLabel || "";
 			elements.vacationPeriodsLimit.classList.toggle("vacation-periods-limit--exceeded", Boolean(modalState.exceedsLimit && modalState.limitDays > 0));
@@ -584,6 +681,9 @@
 
 		if (modalState.errors.size > 0) {
 			errorMessages.push("Перевірте періоди перед збереженням.");
+		}
+		if (modalState.limitError) {
+			errorMessages.push(modalState.limitError);
 		}
 		if (modalState.hasOverlap) {
 			if (isHr) {
@@ -627,7 +727,7 @@
 		const isHr = isHrUser(appState.currentUser);
 		const hasBlockingOverlap = modalState.hasOverlap && !isHr;
 		const hasBlockingLimit = modalState.exceedsLimit && modalState.limitDays > 0 && !isHr;
-		const disabled = modalState.isReadOnly || hasBlockingOverlap || hasBlockingLimit || modalState.errors.size > 0 || !modalState.isDirty;
+		const disabled = modalState.isReadOnly || hasBlockingOverlap || hasBlockingLimit || modalState.errors.size > 0 || Boolean(modalState.limitError) || !modalState.isDirty;
 		elements.vacationModalSave.disabled = disabled;
 	}
 
@@ -653,7 +753,13 @@
 		sortModalPeriods(dataset);
 		modalState.periods = dataset.map(period => ({ ...period }));
 		modalState.originalPeriods = dataset.map(period => ({ ...period }));
-		modalState.limitDays = Number(employee?.total_vacation_days || 0) > 0 ? Number(employee.total_vacation_days) : 0;
+		const limitValue = getEmployeeLimitValue(employee);
+		modalState.limitDays = Number.isFinite(limitValue) && limitValue !== null ? limitValue : 0;
+		modalState.limitOriginalValue = limitValue !== null ? String(limitValue) : "";
+		modalState.limitInputValue = modalState.limitOriginalValue;
+		modalState.limitDirty = false;
+		modalState.limitError = "";
+		modalState.manualLimitOverride = Boolean(employee?.allocation?.manualOverride);
 		calculateModalState();
 		updateModalLimitInfo(employee);
 		renderEmployeeSelector(appState.currentUser);
@@ -717,6 +823,7 @@
 		if (modalState.isReadOnly) {
 			return;
 		}
+		hideModalSuccess();
 		const today = formatDate(new Date());
 		const newPeriod = {
 			id: generateTempId(),
@@ -748,6 +855,7 @@
 			target.value = period ? period[target.dataset.field] || "" : target.value;
 			return;
 		}
+		hideModalSuccess();
 		const field = target.dataset.field;
 		if (field === "startDate") {
 			period.startDate = target.value || "";
@@ -773,6 +881,7 @@
 		}
 		const periodId = button.dataset.periodId;
 		if (button.dataset.action === "delete") {
+			hideModalSuccess();
 			modalState.periods = modalState.periods.filter(item => item.id !== periodId);
 			calculateModalState();
 			updateModalLimitInfo(getActiveModalEmployee());
@@ -781,6 +890,45 @@
 			renderModalWarnings();
 			updateModalSaveState();
 		}
+	}
+
+	function handleLimitInput(event) {
+		if (!event || !event.target || event.target !== elements.vacationLimitInput) {
+			return;
+		}
+		if (modalState.isReadOnly) {
+			event.target.value = modalState.limitInputValue;
+			return;
+		}
+		hideModalSuccess();
+		const rawValue = event.target.value ?? "";
+		modalState.limitInputValue = rawValue;
+		const trimmed = rawValue.trim();
+		modalState.limitDirty = modalState.limitInputValue !== modalState.limitOriginalValue;
+		let error = "";
+		let nextLimit = modalState.limitDays;
+		if (trimmed === "") {
+			nextLimit = 0;
+		} else if (!/^\d+$/.test(trimmed)) {
+			error = "Використовуйте лише цифри.";
+		} else {
+			const numericValue = Number(trimmed);
+			if (!Number.isFinite(numericValue) || numericValue < 0) {
+				error = "Ліміт має бути числом не меншим за 0.";
+			} else {
+				nextLimit = numericValue;
+			}
+		}
+		modalState.limitError = error;
+		if (!error) {
+			modalState.limitDays = nextLimit;
+			modalState.manualLimitOverride = true;
+		}
+		calculateModalState();
+		updateModalLimitInfo(getActiveModalEmployee());
+		updateModalSummary();
+		renderModalWarnings();
+		updateModalSaveState();
 	}
 
 	async function commitModalChanges() {
@@ -822,11 +970,31 @@
 			}
 		});
 
+		if (modalState.limitDirty && !modalState.limitError) {
+			const employeeRef = db.collection("employees").doc(modalState.employeeId);
+			const updatePayload = {
+				allocation: {
+					...employee.allocation,
+					totalAllocatedDays: modalState.limitDays,
+					manualOverride: true,
+					updatedAt: now,
+					updatedBy: user?.id || null,
+					updatedByName: user?.fullName || user?.name || ""
+				}
+			};
+			batch.set(employeeRef, updatePayload, { merge: true });
+		}
+
 		await batch.commit();
 		modalState.originalPeriods = modalState.periods.map(period => ({ ...period }));
+		modalState.limitOriginalValue = modalState.limitInputValue;
+		modalState.limitDirty = false;
 		modalState.isDirty = false;
+		const refreshedEmployee = getEmployeeById(modalState.employeeId) || employee;
+		modalState.manualLimitOverride = true;
 		calculateModalState();
-		updateModalLimitInfo(employee);
+		updateModalLimitInfo(refreshedEmployee);
+		showModalSuccess("Ліміт і періоди успішно збережено.");
 	}
 
 	function handleVacationModalSubmit(event) {
@@ -1890,6 +2058,24 @@
 		elements.loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Увійти';
 	}
 
+	async function handleLogoutClick() {
+		if (!elements.logoutBtn) {
+			return;
+		}
+		if (!auth.currentUser) {
+			showLoginScreen();
+			return;
+		}
+		elements.logoutBtn.disabled = true;
+		try {
+			await signOutWithCleanup();
+		} catch (error) {
+			console.error("Помилка виходу користувача:", error);
+		} finally {
+			elements.logoutBtn.disabled = false;
+		}
+	}
+
 	function showLoginError(message) {
 		if (!elements.loginError) {
 			return;
@@ -2033,11 +2219,17 @@
 		if (elements.vacationModalEmployeeSelect) {
 			elements.vacationModalEmployeeSelect.addEventListener("change", handleModalEmployeeChange);
 		}
+		if (elements.vacationLimitInput) {
+			elements.vacationLimitInput.addEventListener("input", handleLimitInput);
+		}
 		if (elements.employeeInfoClose) {
 			elements.employeeInfoClose.addEventListener("click", () => closeEmployeeInfoModal());
 		}
 		if (elements.employeeInfoModal) {
 			elements.employeeInfoModal.addEventListener("click", handleEmployeeInfoModalBackdropClick);
+		}
+		if (elements.logoutBtn) {
+			elements.logoutBtn.addEventListener("click", handleLogoutClick);
 		}
 		document.addEventListener("keydown", handleGlobalKeydown);
 		auth.onAuthStateChanged(handleAuthChange);
