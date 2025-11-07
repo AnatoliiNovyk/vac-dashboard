@@ -65,6 +65,54 @@
                 </form>
             </div>
         </div>
+
+        <!-- Employee Info Modal -->
+        <div id="employee-info-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="employee-info-title">
+            <div class="modal-content employee-info-modal">
+                <div class="modal-header">
+                    <h3 id="employee-info-title">Інформація про співробітника</h3>
+                    <button type="button" id="employee-info-close" class="modal-close" aria-label="Закрити">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="employee-info-section">
+                        <h4 id="employee-info-name" class="employee-info-name">—</h4>
+                        <div class="employee-info-grid">
+                            <div class="employee-info-field">
+                                <span class="employee-info-label">ІПН</span>
+                                <span id="employee-info-tax-id" class="employee-info-value">—</span>
+                            </div>
+                            <div class="employee-info-field">
+                                <span class="employee-info-label">Підрозділ</span>
+                                <span id="employee-info-department" class="employee-info-value">—</span>
+                            </div>
+                            <div class="employee-info-field">
+                                <span class="employee-info-label">Посада</span>
+                                <span id="employee-info-position" class="employee-info-value">—</span>
+                            </div>
+                            <div class="employee-info-field">
+                                <span class="employee-info-label">Менеджер</span>
+                                <span id="employee-info-manager" class="employee-info-value">—</span>
+                            </div>
+                            <div class="employee-info-field">
+                                <span class="employee-info-label">Нараховано, дн.</span>
+                                <span id="employee-info-accrued" class="employee-info-value">—</span>
+                            </div>
+                            <div class="employee-info-field">
+                                <span class="employee-info-label">Залишок, дн.</span>
+                                <span id="employee-info-balance" class="employee-info-value">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="employee-info-history">
+                        <h4 class="employee-info-subtitle">Історія відпусток</h4>
+                        <ul id="employee-info-history-list" class="info-history-list"></ul>
+                        <div id="employee-info-history-empty" class="info-history-empty">Відпусток ще не додано.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     <!-- Main Content -->
     <main class="main-content">
         <div class="container">

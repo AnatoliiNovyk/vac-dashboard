@@ -57,6 +57,10 @@
 		limitLabel: ""
 	};
 
+	const infoModalState = {
+		employeeId: null
+	};
+
 	const appData = {
 		employees: [],
 		departments: [],
@@ -97,7 +101,18 @@
 		vacationModalError: document.getElementById("vacation-modal-error"),
 		vacationModalWarning: document.getElementById("vacation-modal-warning"),
 		vacationModalSave: document.getElementById("vacation-modal-save"),
-		vacationModalCancel: document.getElementById("vacation-modal-cancel")
+		vacationModalCancel: document.getElementById("vacation-modal-cancel"),
+		employeeInfoModal: document.getElementById("employee-info-modal"),
+		employeeInfoClose: document.getElementById("employee-info-close"),
+		employeeInfoName: document.getElementById("employee-info-name"),
+		employeeInfoTaxId: document.getElementById("employee-info-tax-id"),
+		employeeInfoDepartment: document.getElementById("employee-info-department"),
+		employeeInfoPosition: document.getElementById("employee-info-position"),
+		employeeInfoManager: document.getElementById("employee-info-manager"),
+		employeeInfoAccrued: document.getElementById("employee-info-accrued"),
+		employeeInfoBalance: document.getElementById("employee-info-balance"),
+		employeeInfoHistoryList: document.getElementById("employee-info-history-list"),
+		employeeInfoHistoryEmpty: document.getElementById("employee-info-history-empty")
 	};
 
 	function connectEmulatorsIfNeeded() {
@@ -899,11 +914,113 @@
 		}
 	}
 
-	function handleVacationModalKeydown(event) {
-		if (event.key === "Escape" && elements.vacationModal && !elements.vacationModal.classList.contains("hidden")) {
-			event.preventDefault();
-			closeVacationManagerModal();
+	function handleEmployeeInfoModalBackdropClick(event) {
+		if (event.target === elements.employeeInfoModal) {
+			closeEmployeeInfoModal();
 		}
+	}
+
+	function handleGlobalKeydown(event) {
+		if (event.key !== "Escape") {
+			return;
+		}
+		let handled = false;
+		if (elements.vacationModal && !elements.vacationModal.classList.contains("hidden")) {
+			closeVacationManagerModal();
+			handled = true;
+		}
+		if (elements.employeeInfoModal && !elements.employeeInfoModal.classList.contains("hidden")) {
+			closeEmployeeInfoModal();
+			handled = true;
+		}
+		if (handled) {
+			event.preventDefault();
+		}
+	}
+
+	function openEmployeeInfoModal(employeeOrId) {
+		const employeeId = typeof employeeOrId === "string" ? employeeOrId : employeeOrId?.id;
+		if (!employeeId) {
+			return;
+		}
+		const employee = getEnrichedEmployeeById(employeeId);
+		if (!employee) {
+			console.warn("Не знайдено дані співробітника для інфо-модалки", { employeeId });
+			return;
+		}
+		infoModalState.employeeId = employeeId;
+		populateEmployeeInfoModal(employee);
+		toggleHidden(elements.employeeInfoModal, false);
+		if (elements.employeeInfoClose) {
+			elements.employeeInfoClose.focus();
+		}
+	}
+
+	function closeEmployeeInfoModal() {
+		infoModalState.employeeId = null;
+		if (elements.employeeInfoModal) {
+			toggleHidden(elements.employeeInfoModal, true);
+		}
+	}
+
+	function populateEmployeeInfoModal(employee) {
+		if (!employee) {
+			return;
+		}
+		const manager = employee.manager_id ? getEnrichedEmployeeById(employee.manager_id) : null;
+		const accrued = getEmployeeAccruedDays(employee);
+		const balance = getEmployeeBalance(employee);
+		if (elements.employeeInfoName) {
+			elements.employeeInfoName.textContent = employee.fullName || employee.name || "—";
+		}
+		if (elements.employeeInfoTaxId) {
+			elements.employeeInfoTaxId.textContent = employee.tax_id || employee.raw?.tax_id || "—";
+		}
+		if (elements.employeeInfoDepartment) {
+			elements.employeeInfoDepartment.textContent = employee.departmentName || employee.department || "—";
+		}
+		if (elements.employeeInfoPosition) {
+			elements.employeeInfoPosition.textContent = employee.position || employee.raw?.position || "—";
+		}
+		if (elements.employeeInfoManager) {
+			elements.employeeInfoManager.textContent = formatManagerSummary(manager);
+		}
+		if (elements.employeeInfoAccrued) {
+			elements.employeeInfoAccrued.textContent = typeof accrued === "number" ? String(accrued) : "—";
+		}
+		if (elements.employeeInfoBalance) {
+			elements.employeeInfoBalance.textContent = typeof balance === "number" ? String(balance) : "—";
+		}
+		if (elements.employeeInfoHistoryList) {
+			clearNode(elements.employeeInfoHistoryList);
+			const history = (employee.vacationPeriods || []).slice().sort((a, b) => b.start_date.localeCompare(a.start_date));
+			if (history.length === 0) {
+				toggleHidden(elements.employeeInfoHistoryList, true);
+				toggleHidden(elements.employeeInfoHistoryEmpty, false);
+				return;
+			}
+			toggleHidden(elements.employeeInfoHistoryList, false);
+			toggleHidden(elements.employeeInfoHistoryEmpty, true);
+			history.forEach(period => {
+				const item = createElement("li", "info-history-item");
+				item.appendChild(createElement("div", "info-history-range", formatRange(period.start_date, period.end_date) || "—"));
+				const statusLabel = computeStatus([period]);
+				item.appendChild(createElement("div", "info-history-status", `Статус: ${statusLabel}`));
+				elements.employeeInfoHistoryList.appendChild(item);
+			});
+		}
+	}
+
+	function refreshEmployeeInfoModal() {
+		if (!infoModalState.employeeId || !elements.employeeInfoModal || elements.employeeInfoModal.classList.contains("hidden")) {
+			return;
+		}
+		const updatedEmployee = getEnrichedEmployeeById(infoModalState.employeeId);
+		if (!updatedEmployee) {
+			closeEmployeeInfoModal();
+			return;
+		}
+		populateEmployeeInfoModal(updatedEmployee);
 	}
 
 	function normalizeRoleFlags(flags = {}) {
@@ -983,6 +1100,53 @@
 				computedStatus: computeStatus(periods)
 			};
 		});
+	}
+
+	function getEnrichedEmployeeById(id) {
+		if (!id) {
+			return null;
+		}
+		const enriched = enrichEmployeeData();
+		return enriched.find(emp => emp.id === id) || null;
+	}
+
+	function getEmployeeAccruedDays(employee) {
+		const allocationTotal = employee?.allocation?.totalAllocatedDays;
+		if (typeof allocationTotal === "number" && Number.isFinite(allocationTotal)) {
+			return allocationTotal;
+		}
+		const total = employee?.total_vacation_days;
+		return typeof total === "number" && Number.isFinite(total) ? total : null;
+	}
+
+	function getEmployeeBalance(employee) {
+		const accrued = getEmployeeAccruedDays(employee);
+		if (typeof accrued === "number") {
+			const used = typeof employee?.used_vacation_days === "number" && Number.isFinite(employee.used_vacation_days)
+				? employee.used_vacation_days
+				: 0;
+			const balance = accrued - used;
+			if (Number.isFinite(balance)) {
+				return balance;
+			}
+		}
+		const fallback = employee?.raw?.days_left;
+		return typeof fallback === "number" && Number.isFinite(fallback) ? fallback : null;
+	}
+
+	function formatManagerSummary(manager) {
+		if (!manager) {
+			return "—";
+		}
+		const primaryName = typeof manager.fullName === "string" && manager.fullName.trim().length > 0
+			? manager.fullName.trim()
+			: `${manager.name || ""} ${manager.surname || ""}`.trim();
+		const name = primaryName || "";
+		const position = manager.position || manager.raw?.position || "";
+		if (name && position) {
+			return `${name} (${position})`;
+		}
+		return name || position || "—";
 	}
 
 	function syncCurrentUserFromDataset() {
@@ -1560,9 +1724,19 @@
 			if (canManageVacations) {
 				const actionsCell = createElement("td", "actions-column");
 				const actionsWrapper = createElement("div", "action-buttons");
+				const infoButton = document.createElement("button");
+				infoButton.type = "button";
+				infoButton.className = "btn btn--secondary btn--icon-only";
+				infoButton.title = "Інфо";
+				infoButton.setAttribute("aria-label", `Переглянути інформацію: ${fullName || "співробітник"}`);
+				infoButton.setAttribute("aria-haspopup", "dialog");
+				infoButton.addEventListener("click", () => openEmployeeInfoModal(employee.id));
+				infoButton.appendChild(createElement("i", "fas fa-eye"));
+				infoButton.appendChild(createElement("span", "sr-only", "Інфо"));
 				const manageButton = createElement("button", "btn btn--secondary btn--small", "Періоди");
 				manageButton.type = "button";
 				manageButton.addEventListener("click", () => openVacationManagerModal(employee));
+				actionsWrapper.appendChild(infoButton);
 				actionsWrapper.appendChild(manageButton);
 				actionsCell.appendChild(actionsWrapper);
 				row.appendChild(actionsCell);
@@ -1741,6 +1915,7 @@
 			appData.employees = snapshot.docs.map(normalizeEmployeeDoc);
 			syncCurrentUserFromDataset();
 			rerenderUI(appState.currentTab);
+			refreshEmployeeInfoModal();
 		}, error => console.error("Помилка слухача employees:", error));
 		appState.listeners.push(employeesListener);
 
@@ -1748,6 +1923,7 @@
 			appData.vacationPeriods = snapshot.docs.map(normalizeVacationDoc);
 			rerenderUI(appState.currentTab);
 			refreshVacationManagerModal();
+			refreshEmployeeInfoModal();
 		}, error => console.error("Помилка слухача vacation_periods:", error));
 		appState.listeners.push(vacationsListener);
 	}
@@ -1789,6 +1965,8 @@
 
 	async function signOutWithCleanup(message) {
 		teardownListeners();
+		closeVacationManagerModal(true);
+		closeEmployeeInfoModal();
 		try {
 			await auth.signOut();
 		} catch (error) {
@@ -1848,7 +2026,13 @@
 		if (elements.vacationModalEmployeeSelect) {
 			elements.vacationModalEmployeeSelect.addEventListener("change", handleModalEmployeeChange);
 		}
-		document.addEventListener("keydown", handleVacationModalKeydown);
+		if (elements.employeeInfoClose) {
+			elements.employeeInfoClose.addEventListener("click", () => closeEmployeeInfoModal());
+		}
+		if (elements.employeeInfoModal) {
+			elements.employeeInfoModal.addEventListener("click", handleEmployeeInfoModalBackdropClick);
+		}
+		document.addEventListener("keydown", handleGlobalKeydown);
 		auth.onAuthStateChanged(handleAuthChange);
 		if (elements.taxIdInput) {
 			elements.taxIdInput.focus();

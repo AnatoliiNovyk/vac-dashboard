@@ -42,79 +42,107 @@ This is a Firebase-backed vacation dashboard for EGIS-UKRAINA, with a Node.js/Ex
 ---
 For questions or missing details, review `changelogs/` and ask for clarification.
 
-Системний промпт: Vacation Dashboard — Firebase Studio, ІПН-логін, Restore UI
+Системний промпт: Vacation Dashboard — Firebase Studio only
 
-Місія і рамки
+Місія і заборони
 
-- Розробляй і виправляй Vacation Dashboard виключно у Firebase‑стеку: Auth, Firestore/RTDB, Cloud Functions, Storage, Hosting/App Hosting, Emulator Suite.
-- Заборонено будь‑які локальні/сторонні БД, самописні бекенди, хардкод користувачів, UI‑евристики ролей, логіка заявок/затверджень.
-- Усі зміни — малі, відкотні, з обов’язковим changelog у changelogs/.
+- Розробка виключно у Firebase Studio, бекенд виключно на Firebase (Auth, Firestore або RTDB, Cloud Functions, Storage, Hosting/App Hosting, Emulator Suite). Жодних локальних БД (SQLite/MySQL/Postgres), жодних сторонніх серверів без погодження.
+- Будь‑яка спроба винести бекенд у локальну базу, змінити джерело даних або зламати схему доступів — заборонена.
+- Кожна зміна — малий атомарний крок з окремим changelog у папці changelogs/.
 
-Крок 0: Restore UI (обов’язковий перед будь‑якими правками)
+Ролі, вкладки, права доступу
 
-- Поверни дизайн до останньої стабільної версії: public/index.html, style.css, app.js (частина верстки) мають збігатися з еталоном/стабільним комітом.
-- Заборонено змінювати HTML/CSS/класи/сітки/відступи на цьому кроці; дозволено лише підключити/ініціалізувати скрипти без зміни DOM.
-- Надати DIFF по кожному файлу та скріни “до/після”; будь‑яка візуальна розбіжність — дефект.
-
-Аутентифікація: одне поле “ІПН” через custom token
-
-- Екран входу містить лише поле “ІПН” (10 цифр). Ніяких e‑mail/паролів у UI.
-- callable Cloud Function signInWithTIN({ tin }): валідація /^\d{10}\$/, пошук employees.tax_id == tin, uid = doc.id, optional setCustomUserClaims(uid, roleFlags), createCustomToken(uid) → return { token }.
-- Клієнт: виклик функції → signInWithCustomToken → зчитування профілю/claims → рендер вкладок/прав.
-- Додай базовий захист від перебору (rate‑limit/логування спроб).
-
-Ролі, вкладки, права
-
-- Ролі: HR, Manager, Employee; прапори: isHR, isManager, isHRHead.
+- Ролі: HR, Manager, Employee; можливе поєднання ролей (HR може бути керівником відділу HR; HR може також мати manager‑вертикаль).
 - Вкладки:
-    - HR‑керівник: HR View, Manager View, My View
-    - HR: HR View, My View
-    - Manager: Manager View, My View
-    - Employee: My View
-- Видимість вкладок і кнопок базується лише на claims/або профілі користувача з бекенду; будь‑які UI‑перемикачі ролей — заборонені.
-- HR має право редагувати всі дані співробітника; бекенд і правила безпеки це забезпечують.
+    - HR‑керівник HR‑відділу: HR, Manager, My View.
+    - Інші HR: HR, My View.
+    - Менеджер: Manager, My View.
+    - Співробітник: My View.
+- HR має право редагувати всі дані будь‑якого співробітника (UI + перевірка на бекенді/Rules/Functions + аудит).
+- Відображення вкладок визначається тільки claim/ролями з бекенду (custom claims або user profile doc), без евристик у фронті.
 
-Статуси відпусток
+Модель статусів (тільки 3)
 
-- Єдині статуси: “У відпустці”, “Заплановано”, “На роботі”.
-- Єдина функція обчислення статусу (TZ‑safe, date‑only, включно); пріоритет: У відпустці > Заплановано > На роботі.
-- Функціонал заявок/затверджень відсутній і не додається.
+- Дозволені: “У відпустці”, “Заплановано”, “На роботі”.
+- Пріоритет: У відпустці > Заплановано > На роботі.
+- Єдина функція обчислення статусу (TZ‑safe, date‑only, включно) застосовується всюди.
 
-Manager View: тільки вертикаль підлеглих
+Відключення заявок/затверджень
 
-- Джерело даних Manager View — callable getManagerTeam або кеш teamTrees/{managerId}; жодних глобальних HR‑зрізів у цій вкладці.
-- Правила безпеки дозволяють менеджеру читати лише self + descendants; HR — глобально; Employee — лише self.
+- Функціонал “запит/затвердження відпусток” повністю вимкнений прапором FEATURES.REQUESTS_ENABLED = false.
+- Жодних кнопок/бейджів “Pending/Approved/Rejected”; відповідні ендпойнти/логіка не виконуються; на API/Functions — відповідь 404/410.
 
-Імпорт/Експорт BAS
+Дані, Firebase і джерела істини
 
-- Доступні тільки у HR View, лише для HR; керуються прапором FEATURES.BAS_SYNC_ENABLED.
-- Пайплайн у Functions з валідацією, ідемпотентністю, аудитом, оновленням teamTrees.
+- Джерела даних — тільки Firestore (або RTDB, якщо так визначено).
+- Структури (приклад на Firestore):
+    - employees/{id}: { externalId, fullName, departmentId/name, managerId, active, email/phone, allocation.totalAllocatedDays, updatedAt, roleClaims: { isHR, isManager, isHRHead } }
+    - vacations/{id}: { employeeId, startDate, endDate, type }
+    - teamTrees/{managerId}: { descendants: [employeeDocIds], updatedAt } — кеш вертикалі для менеджера (оновлюється функціями).
+- Жодних сторонніх SQL/ORM. Весь код вибірок — через Firebase SDK або Cloud Functions.
 
-Підключення до емулювань (DEV)
+Manager View: вертикаль менеджера
 
-- Перед першими викликами SDK на клієнті:
-    - connectAuthEmulator(auth, 'http://localhost:9099')
-    - connectFirestoreEmulator(db, 'localhost', 8080)
-    - connectFunctionsEmulator(functions, 'localhost', 5001)
-- Вимоги до середовища: Node 18+, JDK 21+. Продукційний деплой дозволений лише після локальних тестів.
+- Для “Manager View” дані беруться тільки з вертикалі поточного користувача (всі підлеглі вниз), а не з глобального HR‑зрізу.
+- Реалізація:
+    - Cloud Function (callable) getManagerTeam(managerId, filters) виконує BFS/DFS (або читає кеш teamTrees/{managerId}).
+    - Security Rules обмежують читання employees/vacations до id з teamTrees поточного менеджера (HR може читати все, але “Manager View” фронт використовує team‑зріз).
+- HR‑керівник у “Manager View” бачить вертикаль свого відділу; у “HR View” — глобально.
 
-Обов’язковий формат кожного кроку агента
+Імпорт/експорт з 1С BAS (BAF) — тільки у HR View
 
-- Check \& Plan: що і навіщо змінюється, ризики, як тестувати.
-- Proposed Changes: файли/рядки, код/псевдокод, вплив на Rules/Functions/клієнт.
-- Validation: точні команди для емулювань і локального запуску, очікуваний результат, що перевірити у UI.
-- Changelog: готовий текст у changelogs/YYYY‑MM‑DD_HH‑mm‑ss_changelog.md з DIFF, скрінами, rollback.
+- Кнопки “Імпорт з BAS” / “Експорт у BAS” — тільки у HR View, тільки для HR.
+- Прапор FEATURES.BAS_SYNC_ENABLED дозволяє повністю вимкнути інтеграцію.
+- Імпорт: файл CSV/JSON/XML або запит до Cloud Function; pipeline у Functions: parse → validate → match/upsert (idempotent) → resolve managerId (другий прохід) → audit → оновлення teamTrees.
+- Експорт: Cloud Function формує CSV/JSON/XML з фільтрами (департамент/статус/updatedSince), стрім або Storage‑посилання.
+- Валідаційні обов’язкові поля: externalId, fullName, department, position, email/phone, employment_status, total_allocated_days; manager_external_id — для вертикалі.
 
-Контрольні сценарії (must pass)
+Графіки в HR View
 
-- “UI Restore”: візуал і розмітка ідентичні еталону (скріни збігаються).
-- Вхід ІПН одним полем → успішний token → вкладки за ролями з бекенду.
-- HR бачить та може планувати/редагувати; інші — ні (і бекенд блокує спроби).
-- Manager View показує лише підлеглих; глобальні колекції не читаються в цій вкладці.
-- Тільки 3 статуси; немає елементів заявок/затверджень.
-- Усі зміни зафіксовані окремим changelog; є інструкція для локального тесту і rollback.
+- За замовчуванням можуть бути вимкнені прапором FEATURES.HR_ANALYTICS_ENABLED = false (повністю ховаються і не підвантажують бібліотеки/дані).
+- Якщо ввімкнені — рендеряться ТІЛЬКИ під основним контентом HR View у горизонтальній responsive‑сітці (3/2/1 колонки), без вертикального стеку; ErrorBoundary/ліниве завантаження, аби падіння графіка не ламало вкладки.
 
-Політика змін
+Колонка “Залишок”
 
-- Не змінюй дизайн/стилі під час фіксів логіки, окрім кроку “UI Restore”. Будь-які UI‑покращення — окремими погодженими кроками.
-- Якщо щось неможливо виконати — вкажи точну причину, обмеження, альтернативний план і наслідки.
+- “Залишок” (days_left) відображається у всіх таблицях; формула: total_allocated_days − days_taken_to_date (майбутні не віднімаємо; активна відпустка — лише відпрацьована частина до today).
+- Якщо “days” приходить із бекенда — показуємо його, але розбіжності логуються.
+
+Безпека і доступ
+
+- Identity — Firebase Auth. Рольові claims — або custom claims, або поле у профілі користувача, яке підхоплюється Rules/Functions.
+- Firestore/RTDB Security Rules:
+    - HR: читання/зміни за політикою (повний доступ до employees/vacations/allocations).
+    - Manager: читання/фільтрація тільки teamTrees[currentUserId].descendants (+ self).
+    - Employee: доступ тільки до власних даних.
+- Усі критичні зміни (імпорт, масові апдейти) — виключно через Cloud Functions з аудитом.
+
+Розробка, середовище та деплой
+
+- Використовувати Emulator Suite для локальної перевірки Firebase‑сервісів; жодних самописних серверів чи локальних БД.
+- Деплой: Firebase Hosting/App Hosting, Cloud Functions; конфіги/секрети — через Config/Secret Manager; ніяких ключів у коді.
+- Перевіряти квоти/ліміти читань/записів; використовувати пагінацію та вибіркові поля.
+
+Журнали змін (обов’язково після кожного кроку)
+
+- Завжди створювати новий файл: changelogs/YYYY‑MM‑DD_HH‑mm‑ss_changelog.md.
+- Структура: Title, Summary, Files changed (шляхи/рядки), Data/Rules/Functions, Tests/Validation, Risks \& Rollback, Next step, Screens (до/після).
+
+Процес виконання кроків агентом
+
+- Кожну відповідь починай із “Check \& Plan” (що саме робиш і чому), далі “Proposed changes (files/lines)”, “Validation”, “Changelog write‑up prepared”.
+- Ніколи не видаляй файли/схеми — вимикай прапорами/guards, переносиш у legacy/ з поясненням.
+- Будь‑які зміни схем даних/Rules/Functions — окремі кроки з тестами в емулюючому середовищі.
+
+Швидкі контрольні сценарії (must pass)
+
+- Рендер вкладок строго за ролями; тільки HR‑керівник має 3 вкладки.
+- Усі статуси — лише 3; немає залишків логіки заявок/затверджень.
+- “Manager View” у HR Manager показує тільки вертикаль підлеглих (через Cloud Function/Rules), а не глобальний список.
+- “Залишок” коректний; таблиці/календар працюють; графіки або вимкнені, або у горизонтальній сітці під основним контентом HR View.
+- Імпорт/експорт BAS — тільки у HR View; дані ідемпотентні; audit/логування присутні; teamTrees оновлюються.
+- Жодних звернень до локальних БД чи сторонніх серверів без погодження; усі виклики — через Firebase.
+
+Нагадування
+
+- Якщо виникло бажання “спростити” бекенд локально — зупинись. Цей проєкт — Firebase‑first. Усі дані, доступи, бізнес‑логіка та імпорт/експорт реалізуються через Firebase Studio і Firebase‑сервіси.
+- Будь‑який відхід від цього промпта вимагає явного погодження і окремого changelog‑кроку з ризиками і планом відкату.
