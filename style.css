@@ -1015,9 +1015,52 @@ select.form-control {
 
 /* Content Area */
 .content-area {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
   gap: var(--space-24);
+}
+
+.calendar-section {
+  flex: 0 0 clamp(320px, 28%, 350px);
+  width: clamp(320px, 28%, 350px);
+  max-width: clamp(320px, 28%, 350px);
+  min-width: 300px;
+  position: relative;
+  z-index: 0;
+  box-shadow: inset -1px 0 0 rgba(var(--color-brown-600-rgb, 94, 82, 64), 0.12);
+}
+
+.table-section {
+  flex: 1 1 0;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+@media (max-width: 1023px) {
+  .content-area {
+    flex-direction: column;
+  }
+
+  .calendar-section {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-shadow: none;
+  }
+
+  .calendar-body {
+    aspect-ratio: auto;
+    max-height: none;
+    min-height: 240px;
+  }
+
+  .table-section {
+    overflow: visible;
+  }
 }
 
 /* Calendar Section */
@@ -1026,14 +1069,17 @@ select.form-control {
   padding: var(--space-20);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-card-border);
-  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-12);
 }
 
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--space-20);
+  margin-bottom: var(--space-12);
 }
 
 .calendar-header h3 {
@@ -1043,27 +1089,63 @@ select.form-control {
 .calendar-controls {
   display: flex;
   align-items: center;
-  gap: var(--space-12);
+  gap: var(--space-8);
+  justify-content: flex-start;
+}
+
+.calendar-body {
+  position: relative;
+  width: 100%;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  aspect-ratio: 1 / 1.05;
+  min-height: 260px;
+  max-height: 340px;
+  overflow: visible;
+}
+
+#vacation-calendar {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: var(--space-8);
+  overflow: visible;
 }
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: var(--space-2);
-  margin-bottom: var(--space-16);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: auto repeat(6, 1fr);
+  gap: var(--space-6);
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .calendar-day {
-  aspect-ratio: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-6);
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-standard);
+  transition: background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
   position: relative;
-  min-height: 40px;
+  min-height: 0;
+  height: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 .calendar-day:hover {
@@ -1074,6 +1156,8 @@ select.form-control {
   font-weight: var(--font-weight-bold);
   color: var(--color-text-secondary);
   cursor: default;
+  justify-content: center;
+  align-items: center;
 }
 
 .calendar-day--header:hover {
@@ -1086,9 +1170,8 @@ select.form-control {
 }
 
 .calendar-day--today {
-  background-color: var(--color-primary);
-  color: var(--color-btn-primary-text);
-  font-weight: var(--font-weight-bold);
+  border-color: rgba(var(--color-success-rgb), 0.4);
+  box-shadow: inset 0 0 0 1px rgba(var(--color-success-rgb), 0.4);
 }
 
 .calendar-day--vacation {
@@ -1096,10 +1179,83 @@ select.form-control {
   background-color: rgba(var(--vacation-color-rgb, var(--color-teal-500-rgb)), 0.1);
 }
 
+.calendar-day--has-data {
+  background-color: rgba(var(--color-primary-rgb, var(--color-teal-500-rgb)), 0.06);
+}
+
+.calendar-day-date {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-day-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  margin-top: auto;
+}
+
+.calendar-day-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  min-height: 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-day-badge--current {
+  color: var(--color-success);
+  background-color: rgba(var(--color-success-rgb), 0.18);
+}
+
+.calendar-day-badge--planned {
+  color: var(--color-warning);
+  background-color: rgba(var(--color-warning-rgb), 0.18);
+}
+
+.calendar-month-label {
+  font-weight: var(--font-weight-semibold);
+  text-transform: capitalize;
+}
+
+.calendar-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: var(--space-4) var(--space-8);
+  gap: var(--space-4);
+}
+
+.calendar-nav-btn--reset {
+  min-width: 72px;
+}
+
+.btn--icon {
+  padding: var(--space-4);
+  min-width: 32px;
+}
+
 .calendar-legend {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-12);
+  margin-top: var(--space-12);
+  align-self: flex-start;
 }
 
 .legend-item {
@@ -1113,6 +1269,24 @@ select.form-control {
   width: 12px;
   height: 12px;
   border-radius: var(--radius-sm);
+}
+
+.legend-color--current {
+  background-color: var(--color-success);
+}
+
+.legend-color--planned {
+  background-color: var(--color-warning);
+}
+
+.legend-color--empty {
+  background-color: rgba(var(--color-info-rgb), 0.4);
+}
+
+.calendar-empty-hint {
+  margin-top: var(--space-12);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 /* Table Section */
@@ -1306,7 +1480,6 @@ select.form-control {
   margin-bottom: var(--space-6);
   color: var(--color-text);
 }
-
 /* Vacation manager modal */
 .vacation-manager {
   width: min(720px, 94vw);
@@ -1317,6 +1490,12 @@ select.form-control {
   flex-direction: column;
   gap: var(--space-8);
   margin-bottom: var(--space-20);
+}
+
+@media (min-width: 1024px) {
+  .calendar-section {
+    max-width: 30%;
+  }
 }
 
 .vacation-manager__employee-name {

@@ -36,7 +36,9 @@
 			department: "",
 			status: ""
 		},
-		editingEmployeeId: null
+		editingEmployeeId: null,
+		calendarBaseDateIso: null,
+		calendarMonthOffset: 0
 	};
 
 	const modalState = {
@@ -156,6 +158,54 @@
 		}
 		const diff = Math.abs(endDate - startDate);
 		return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+	}
+
+	function createUtcDate(year, monthIndex, day) {
+		return new Date(Date.UTC(year, monthIndex, day));
+	}
+
+	function addMonthsUtc(date, months) {
+		const result = createUtcDate(date.getUTCFullYear(), date.getUTCMonth(), 1);
+		result.setUTCMonth(result.getUTCMonth() + months);
+		return result;
+	}
+
+	function addDaysUtc(date, days) {
+		const result = new Date(date.getTime());
+		result.setUTCDate(result.getUTCDate() + days);
+		return result;
+	}
+
+	function startOfMonthUtc(date) {
+		return createUtcDate(date.getUTCFullYear(), date.getUTCMonth(), 1);
+	}
+
+	function startOfWeekMondayUtc(date) {
+		const weekday = date.getUTCDay();
+		const offset = (weekday + 6) % 7; // convert Sunday-first to Monday-first
+		return addDaysUtc(date, -offset);
+	}
+
+	function formatMonthLabel(date) {
+		const formatter = new Intl.DateTimeFormat("uk-UA", {
+			month: "long",
+			year: "numeric"
+		});
+		return formatter.format(date);
+	}
+
+	function parseIsoDateToUtc(iso) {
+		if (typeof iso !== "string" || iso.length < 10) {
+			return null;
+		}
+		const [yearStr, monthStr, dayStr] = iso.split("-");
+		const year = Number(yearStr);
+		const monthIndex = Number(monthStr) - 1;
+		const day = Number(dayStr);
+		if (!Number.isFinite(year) || !Number.isFinite(monthIndex) || !Number.isFinite(day)) {
+			return null;
+		}
+		return createUtcDate(year, monthIndex, day);
 	}
 
 	function formatDateHuman(date) {
@@ -1206,7 +1256,7 @@
 	}
 
 	function renderTeamCalendar(employees) {
-		if (!elements.calendar) {
+		if (!elements.calendar || !elements.calendarControls || !elements.calendarLegend) {
 			return;
 		}
 		clearNode(elements.calendar);
@@ -1219,41 +1269,208 @@
 		}
 
 		const todayIso = formatDate(new Date());
-		const periods = [];
+		const statusFilter = appState.filters?.status || "";
+		const relevantPeriods = [];
+
+		// Collect only active or upcoming periods so the month grid mirrors the filtered dataset.
 		employees.forEach(employee => {
+			const employeeName = employee.fullName || `${employee.name || ""} ${employee.surname || ""}`.trim() || employee.id;
 			(employee.vacationPeriods || []).forEach(period => {
-				periods.push({
-					...period,
-					employeeName: employee.fullName || `${employee.name} ${employee.surname}`.trim(),
-					status: isCurrentVacation(period)
-						? "У відпустці"
-						: period.start_date > todayIso
-							? "Заплановано"
-							: "На роботі"
+				if (!period || !period.start_date || !period.end_date) {
+					return;
+				}
+				const startIso = formatDate(period.start_date);
+				const endIso = formatDate(period.end_date);
+				if (!startIso || !endIso) {
+					return;
+				}
+				const periodStatus = startIso <= todayIso && endIso >= todayIso
+					? "У відпустці"
+					: startIso > todayIso
+						? "Заплановано"
+						: "На роботі";
+				if (!statusFilter && periodStatus === "На роботі") {
+					return;
+				}
+				if (statusFilter && periodStatus !== statusFilter) {
+					return;
+				}
+				relevantPeriods.push({
+					employeeId: employee.id,
+					employeeName,
+					start_date: startIso,
+					end_date: endIso,
+					status: periodStatus
 				});
 			});
 		});
 
-		periods.sort((a, b) => a.start_date.localeCompare(b.start_date));
-
-		if (periods.length === 0) {
-			elements.calendar.innerHTML = "<em>Відпустки не знайдені.</em>";
-			return;
+		const fallbackIso = todayIso;
+		const candidateIso = relevantPeriods
+			.map(period => (period.status === "У відпустці" && period.start_date <= todayIso ? todayIso : period.start_date))
+			.sort()[0];
+		const baseDateIso = candidateIso || fallbackIso;
+		if (appState.calendarBaseDateIso !== baseDateIso) {
+			appState.calendarBaseDateIso = baseDateIso;
+			appState.calendarMonthOffset = 0;
 		}
 
-		const list = createElement("ul", "calendar-list");
-		periods.forEach(period => {
-			const item = createElement("li", `calendar-list-item calendar-list-item--${period.status === "У відпустці" ? "current" : period.status === "Заплановано" ? "planned" : "default"}`);
-			const title = createElement("div", "calendar-list-item-title", period.employeeName || "Невідомий співробітник");
-			const range = createElement("div", "calendar-list-item-range", formatRange(period.start_date, period.end_date));
-			const status = createElement("span", "calendar-list-item-status", period.status);
-			item.appendChild(title);
-			item.appendChild(range);
-			item.appendChild(status);
-			list.appendChild(item);
+		const anchorDate = parseIsoDateToUtc(appState.calendarBaseDateIso) || parseIsoDateToUtc(todayIso) || new Date();
+		const targetMonthDate = addMonthsUtc(anchorDate, appState.calendarMonthOffset || 0);
+		const monthStart = startOfMonthUtc(targetMonthDate);
+		const gridStart = startOfWeekMondayUtc(monthStart);
+
+		const calendarGrid = createElement("div", "calendar-grid");
+		const weekDays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
+		weekDays.forEach(label => {
+			const headerCell = createElement("div", "calendar-day calendar-day--header", label);
+			calendarGrid.appendChild(headerCell);
 		});
 
-		elements.calendar.appendChild(list);
+		const cellCount = 42;
+		let cursor = gridStart;
+		const summary = {
+			current: new Set(),
+			planned: new Set()
+		};
+
+		for (let i = 0; i < cellCount; i += 1) {
+			const dayIso = formatDate(cursor);
+			const inCurrentMonth = cursor.getUTCMonth() === monthStart.getUTCMonth();
+			const day = createElement("div", "calendar-day");
+			if (!inCurrentMonth) {
+				day.classList.add("calendar-day--other-month");
+			}
+			if (dayIso === todayIso) {
+				day.classList.add("calendar-day--today");
+			}
+
+			const dateLabel = createElement("div", "calendar-day-date", String(cursor.getUTCDate()));
+			day.appendChild(dateLabel);
+
+			const dayStatuses = [];
+			relevantPeriods.forEach(period => {
+				if (dayIso >= period.start_date && dayIso <= period.end_date) {
+					dayStatuses.push(period);
+				}
+			});
+
+			if (dayStatuses.length > 0) {
+				day.classList.add("calendar-day--has-data");
+				const badgeContainer = createElement("div", "calendar-day-badges");
+				const currentEntries = [];
+				const plannedEntries = [];
+				dayStatuses.forEach(period => {
+					if (period.status === "У відпустці") {
+						currentEntries.push(period);
+						summary.current.add(period.employeeId);
+					} else if (period.status === "Заплановано") {
+						plannedEntries.push(period);
+						summary.planned.add(period.employeeId);
+					}
+				});
+
+				if (currentEntries.length > 0) {
+					const badge = createElement(
+						"div",
+						"calendar-day-badge calendar-day-badge--current",
+						String(currentEntries.length)
+					);
+					badge.title = currentEntries
+						.map(entry => `${entry.employeeName} — ${formatRange(entry.start_date, entry.end_date)}`)
+						.join("\n");
+					badgeContainer.appendChild(badge);
+				}
+				if (plannedEntries.length > 0) {
+					const badge = createElement(
+						"div",
+						"calendar-day-badge calendar-day-badge--planned",
+						String(plannedEntries.length)
+					);
+					badge.title = plannedEntries
+						.map(entry => `${entry.employeeName} — ${formatRange(entry.start_date, entry.end_date)}`)
+						.join("\n");
+					badgeContainer.appendChild(badge);
+				}
+				day.appendChild(badgeContainer);
+			}
+
+			calendarGrid.appendChild(day);
+			cursor = addDaysUtc(cursor, 1);
+		}
+
+		const maxOffset = 12;
+		const offset = appState.calendarMonthOffset || 0;
+		const prevBtn = createElement("button", "btn btn--secondary btn--icon calendar-nav-btn");
+		prevBtn.type = "button";
+		prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+		prevBtn.disabled = offset <= -maxOffset;
+		prevBtn.addEventListener("click", () => {
+			appState.calendarMonthOffset = Math.max(offset - 1, -maxOffset);
+			renderTeamCalendar(employees);
+		});
+
+		const nextBtn = createElement("button", "btn btn--secondary btn--icon calendar-nav-btn");
+		nextBtn.type = "button";
+		nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+		nextBtn.disabled = offset >= maxOffset;
+		nextBtn.addEventListener("click", () => {
+			appState.calendarMonthOffset = Math.min(offset + 1, maxOffset);
+			renderTeamCalendar(employees);
+		});
+
+		const resetBtn = createElement("button", "btn btn--secondary calendar-nav-btn calendar-nav-btn--reset", "Сьогодні");
+		resetBtn.type = "button";
+		resetBtn.disabled = offset === 0;
+		resetBtn.addEventListener("click", () => {
+			appState.calendarMonthOffset = 0;
+			renderTeamCalendar(employees);
+		});
+
+		const monthLabel = createElement("span", "calendar-month-label", formatMonthLabel(monthStart));
+		monthLabel.style.textTransform = "capitalize";
+
+		elements.calendarControls.appendChild(prevBtn);
+		elements.calendarControls.appendChild(monthLabel);
+		elements.calendarControls.appendChild(nextBtn);
+		elements.calendarControls.appendChild(resetBtn);
+
+		elements.calendar.appendChild(calendarGrid);
+
+		if (relevantPeriods.length === 0) {
+			elements.calendar.appendChild(createElement("div", "calendar-empty-hint", "За вибраними фільтрами немає запланованих або активних відпусток."));
+		}
+
+		const legendConfig = [
+			{
+				status: "У відпустці",
+				label: `У відпустці${summary.current.size ? ` — ${summary.current.size}` : ""}`,
+				className: "legend-color legend-color--current"
+			},
+			{
+				status: "Заплановано",
+				label: `Заплановано${summary.planned.size ? ` — ${summary.planned.size}` : ""}`,
+				className: "legend-color legend-color--planned"
+			}
+		];
+
+		legendConfig
+			.filter(item => !statusFilter || statusFilter === item.status)
+			.forEach(item => {
+				const legendItem = createElement("div", "legend-item");
+				const colorSwatch = createElement("span", item.className);
+				const label = createElement("span", "", item.label);
+				legendItem.appendChild(colorSwatch);
+				legendItem.appendChild(label);
+				elements.calendarLegend.appendChild(legendItem);
+			});
+
+		if (elements.calendarLegend.children.length === 0) {
+			const legendItem = createElement("div", "legend-item");
+			legendItem.appendChild(createElement("span", "legend-color legend-color--empty"));
+			legendItem.appendChild(createElement("span", "", "Немає відпусток для відображення."));
+			elements.calendarLegend.appendChild(legendItem);
+		}
 	}
 
 	function renderTeamTable(tab, employees, userDoc) {
