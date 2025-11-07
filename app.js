@@ -1865,7 +1865,7 @@
 		elements.tableTitle.textContent = titleMap[tab] || "Перелік співробітників";
 
 		const canManageVacations = tab === "HR View" && isHrUser(userDoc);
-	 	const includeDepartmentColumn = tab !== "Manager View";
+		const includeDepartmentColumn = tab !== "Manager View";
 
 		if (!employees || employees.length === 0) {
 			const emptyRow = createElement("tr", "table-row-empty");
@@ -1879,6 +1879,7 @@
 
 		const headRow = createElement("tr");
 		const headCells = [
+			{ label: "#", className: "col-index" },
 			{ label: "Ім'я" }
 		];
 		if (includeDepartmentColumn) {
@@ -1901,9 +1902,10 @@
 
 		const todayIso = formatDate(new Date());
 
-		employees.forEach(employee => {
+		employees.forEach((employee, index) => {
 			const row = createElement("tr");
 			const fullName = employee.fullName || `${employee.name} ${employee.surname}`.trim();
+			row.appendChild(createElement("td", "col-index", String(index + 1)));
 			row.appendChild(createElement("td", "", fullName || "—"));
 			if (includeDepartmentColumn) {
 				row.appendChild(createElement("td", "", employee.departmentName || "—"));
@@ -1972,7 +1974,10 @@
 		elements.tableTitle.textContent = "Мої відпустки";
 
 		const headRow = createElement("tr");
-		["Період", "Днів", "Статус"].forEach(label => headRow.appendChild(createElement("th", "", label)));
+		["#", "Період", "Днів", "Статус"].forEach((label, idx) => {
+			const className = idx === 0 ? "col-index" : "";
+			headRow.appendChild(createElement("th", className, label));
+		});
 		elements.tableHead.appendChild(headRow);
 
 		const periods = getVacationPeriodsForEmployees([userDoc.id]).sort((a, b) => a.start_date.localeCompare(b.start_date));
@@ -1980,15 +1985,16 @@
 		if (periods.length === 0) {
 			const emptyRow = createElement("tr", "table-row-empty");
 			const cell = createElement("td", "table-cell-empty", "Відпусток ще не заплановано.");
-			cell.colSpan = 3;
+			cell.colSpan = 4;
 			emptyRow.appendChild(cell);
 			elements.tableBody.appendChild(emptyRow);
 			elements.calendar.innerHTML = "<em>Відпусток не знайдено.</em>";
 			return;
 		}
 
-		periods.forEach(period => {
+		periods.forEach((period, index) => {
 			const row = createElement("tr");
+			row.appendChild(createElement("td", "col-index", String(index + 1)));
 			row.appendChild(createElement("td", "", formatRange(period.start_date, period.end_date)));
 			row.appendChild(createElement("td", "", String(period.days || computeDays(period.start_date, period.end_date))));
 			row.appendChild(createElement("td", "", computeStatus([period])));

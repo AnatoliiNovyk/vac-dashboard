@@ -1377,6 +1377,13 @@ select.form-control {
   width: 64px;
 }
 
+.col-index {
+  width: 48px;
+  min-width: 40px;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .vacation-type {
   display: inline-flex;
   align-items: center;
