@@ -2058,6 +2058,18 @@
 		elements.loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Увійти';
 	}
 
+	function setLogoutVisibility(isVisible) {
+		const button = elements.logoutBtn;
+		if (!button) {
+			return;
+		}
+		if (!isVisible && document.activeElement === button) {
+			button.blur();
+		}
+		toggleHidden(button, !isVisible);
+		button.setAttribute("aria-hidden", isVisible ? "false" : "true");
+	}
+
 	async function handleLogoutClick() {
 		if (!elements.logoutBtn) {
 			return;
@@ -2131,6 +2143,7 @@
 			if (elements.taxIdInput) {
 				elements.taxIdInput.value = "";
 			}
+			setLogoutVisibility(false);
 			showLoginScreen();
 			resetLoginButton();
 			return;
@@ -2160,6 +2173,7 @@
 		teardownListeners();
 		closeVacationManagerModal(true);
 		closeEmployeeInfoModal();
+		setLogoutVisibility(false);
 		try {
 			await auth.signOut();
 		} catch (error) {
@@ -2180,6 +2194,7 @@
 		if (elements.dashboard) {
 			elements.dashboard.style.display = "";
 		}
+		setLogoutVisibility(true);
 	}
 
 	function showLoginScreen() {
@@ -2191,6 +2206,7 @@
 		if (elements.loginScreen) {
 			elements.loginScreen.style.display = "";
 		}
+		setLogoutVisibility(false);
 	}
 
 	function initialize() {
@@ -2231,6 +2247,7 @@
 		if (elements.logoutBtn) {
 			elements.logoutBtn.addEventListener("click", handleLogoutClick);
 		}
+		setLogoutVisibility(false);
 		document.addEventListener("keydown", handleGlobalKeydown);
 		auth.onAuthStateChanged(handleAuthChange);
 		if (elements.taxIdInput) {
