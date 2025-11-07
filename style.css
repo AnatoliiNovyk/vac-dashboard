@@ -1050,6 +1050,7 @@ select.form-control {
     max-width: 100%;
     min-width: 0;
     box-shadow: none;
+    order: 1;
   }
 
   .calendar-body {
@@ -1060,6 +1061,13 @@ select.form-control {
 
   .table-section {
     overflow: visible;
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    display: block;
+    order: 2;
+    margin-top: var(--space-16);
   }
 }
 
@@ -1621,21 +1629,6 @@ select.form-control {
   .vacation-manager__section-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-}
-
-/* Responsive Design */
-@media (max-width: 1024px) {
-  .content-area {
-    grid-template-columns: 1fr;
-  }
-  
-  .calendar-section {
-    order: 2;
-  }
-  
-  .table-section {
-    order: 1;
   }
 }
 
