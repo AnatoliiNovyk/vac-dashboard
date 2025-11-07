@@ -44,6 +44,7 @@
 		periods: [],
 		originalPeriods: [],
 		errors: new Map(),
+		warnings: new Map(),
 		hasOverlap: false,
 		exceedsLimit: false,
 		isDirty: false,
@@ -227,6 +228,7 @@
 		modalState.periods = [];
 		modalState.originalPeriods = [];
 		modalState.errors = new Map();
+		modalState.warnings = new Map();
 		modalState.hasOverlap = false;
 		modalState.exceedsLimit = false;
 		modalState.isDirty = false;
@@ -270,31 +272,32 @@
 
 	function validateModalPeriods(periods) {
 		const errors = new Map();
+		const warnings = new Map();
 		const sorted = periods.slice().sort((a, b) => (a.startDate || "").localeCompare(b.startDate || ""));
 		let hasOverlap = false;
 		let totalDays = 0;
 
-		const pushError = (periodId, message) => {
+		const push = (map, periodId, message) => {
 			if (!periodId || !message) {
 				return;
 			}
-			const messages = errors.get(periodId) || [];
+			const messages = map.get(periodId) || [];
 			if (!messages.includes(message)) {
 				messages.push(message);
-				errors.set(periodId, messages);
+				map.set(periodId, messages);
 			}
 		};
 
 		sorted.forEach((period, index) => {
 			if (!period.startDate) {
-				pushError(period.id, "Заповніть дату початку.");
+				push(errors, period.id, "Заповніть дату початку.");
 			}
 			if (!period.endDate) {
-				pushError(period.id, "Заповніть дату завершення.");
+				push(errors, period.id, "Заповніть дату завершення.");
 			}
 			if (period.startDate && period.endDate) {
 				if (period.startDate > period.endDate) {
-					pushError(period.id, "Дата завершення не може бути раніше початку.");
+					push(errors, period.id, "Дата завершення не може бути раніше початку.");
 				} else {
 					totalDays += computeDays(period.startDate, period.endDate);
 				}
@@ -303,13 +306,14 @@
 				const prev = sorted[index - 1];
 				if (period.startDate && period.endDate && prev.startDate && prev.endDate && period.startDate <= prev.endDate) {
 					hasOverlap = true;
-					pushError(period.id, "Період перетинається з іншим записом.");
-					pushError(prev.id, "Період перетинається з іншим записом.");
+					const overlapMessage = "Період перетинається з іншим записом.";
+					push(warnings, period.id, overlapMessage);
+					push(warnings, prev.id, overlapMessage);
 				}
 			}
 		});
 
-		return { errors, hasOverlap, totalDays };
+		return { errors, warnings, hasOverlap, totalDays };
 	}
 
 	function arePeriodsEqual(current, original) {
@@ -328,6 +332,7 @@
 	function calculateModalState() {
 		const validation = validateModalPeriods(modalState.periods);
 		modalState.errors = validation.errors;
+		modalState.warnings = validation.warnings;
 		modalState.hasOverlap = validation.hasOverlap;
 		modalState.totalDays = validation.totalDays;
 		modalState.exceedsLimit = modalState.limitDays > 0 && modalState.totalDays > modalState.limitDays;
@@ -424,11 +429,13 @@
 			}
 			row.appendChild(actionsWrapper);
 
-			const rowErrors = modalState.errors.get(period.id);
-			if (rowErrors && rowErrors.length > 0) {
+			const rowErrors = modalState.errors.get(period.id) || [];
+			const rowWarnings = modalState.warnings.get(period.id) || [];
+			const rowMessages = [...rowErrors, ...rowWarnings];
+			if (rowMessages.length > 0) {
 				row.classList.add("vacation-period-row--error");
 				const errorBlock = createElement("div", "vacation-period-row-error");
-				errorBlock.innerHTML = rowErrors.map(message => `<span>${message}</span>`).join("<br>");
+				errorBlock.innerHTML = rowMessages.map(message => `<span>${message}</span>`).join("<br>");
 				row.appendChild(errorBlock);
 			}
 			elements.vacationPeriodList.appendChild(row);
