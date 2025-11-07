@@ -1542,40 +1542,49 @@
 			clearNode(elements.filtersGrid);
 			return;
 		}
-		toggleHidden(elements.filtersSection, false);
-		buildFilters(userDoc);
+		const hasFilters = buildFilters(userDoc, appState.currentTab);
+		toggleHidden(elements.filtersSection, !hasFilters);
 	}
 
-	function buildFilters(userDoc) {
+	function buildFilters(userDoc, currentTab) {
 		if (!elements.filtersGrid) {
 			return;
 		}
 		clearNode(elements.filtersGrid);
 		if (!userDoc || (!userDoc.isHR && !userDoc.isHRHead && !userDoc.isManager)) {
-			return;
+			return false;
 		}
 
-		const departmentGroup = createElement("div", "filter-group");
-		const departmentLabel = createElement("label", "filter-label", "Підрозділ");
-		const departmentSelect = createElement("select", "filter-select");
-		const defaultDepartmentOption = createElement("option", "", "Всі");
-		defaultDepartmentOption.value = "";
-		departmentSelect.appendChild(defaultDepartmentOption);
-		appData.departments.forEach(department => {
-			const option = createElement("option", "", department.name);
-			option.value = department.id;
-			if (appState.filters.department === department.id || appState.filters.department === department.name) {
-				option.selected = true;
-			}
-			departmentSelect.appendChild(option);
-		});
-		departmentSelect.addEventListener("change", () => {
-			appState.filters.department = departmentSelect.value;
-			rerenderUI(appState.currentTab);
-		});
-		departmentGroup.appendChild(departmentLabel);
-		departmentGroup.appendChild(departmentSelect);
-		elements.filtersGrid.appendChild(departmentGroup);
+		const includeDepartmentFilter = currentTab !== "Manager View";
+		let hasFilters = false;
+		let departmentSelect = null;
+
+		if (includeDepartmentFilter) {
+			const departmentGroup = createElement("div", "filter-group");
+			const departmentLabel = createElement("label", "filter-label", "Підрозділ");
+			departmentSelect = createElement("select", "filter-select");
+			const defaultDepartmentOption = createElement("option", "", "Всі");
+			defaultDepartmentOption.value = "";
+			departmentSelect.appendChild(defaultDepartmentOption);
+			appData.departments.forEach(department => {
+				const option = createElement("option", "", department.name);
+				option.value = department.id;
+				if (appState.filters.department === department.id || appState.filters.department === department.name) {
+					option.selected = true;
+				}
+				departmentSelect.appendChild(option);
+			});
+			departmentSelect.addEventListener("change", () => {
+				appState.filters.department = departmentSelect.value;
+				rerenderUI(appState.currentTab);
+			});
+			departmentGroup.appendChild(departmentLabel);
+			departmentGroup.appendChild(departmentSelect);
+			elements.filtersGrid.appendChild(departmentGroup);
+			hasFilters = true;
+		} else if (appState.filters.department) {
+			appState.filters.department = "";
+		}
 
 		let statusSelect = null;
 		if (userDoc.isHR || userDoc.isHRHead) {
@@ -1598,17 +1607,20 @@
 			statusGroup.appendChild(statusLabel);
 			statusGroup.appendChild(statusSelect);
 			elements.filtersGrid.appendChild(statusGroup);
+			hasFilters = true;
 		}
 
 		const shouldRenderReset = userDoc.isHR || userDoc.isHRHead || userDoc.isManager;
-		if (shouldRenderReset) {
+		if (shouldRenderReset && hasFilters) {
 			const resetGroup = createElement("div", "filter-group filter-group--reset");
 			const resetButton = createElement("button", "btn btn--secondary filter-reset-button", "Скинути фільтри");
 			resetButton.type = "button";
 			resetButton.addEventListener("click", () => {
 				appState.filters.department = "";
 				appState.filters.status = "";
-				departmentSelect.value = "";
+				if (departmentSelect) {
+					departmentSelect.value = "";
+				}
 				if (statusSelect) {
 					statusSelect.value = "";
 				}
@@ -1617,6 +1629,8 @@
 			resetGroup.appendChild(resetButton);
 			elements.filtersGrid.appendChild(resetGroup);
 		}
+
+		return hasFilters;
 	}
 
 	function renderTeamCalendar(employees) {
@@ -1851,11 +1865,12 @@
 		elements.tableTitle.textContent = titleMap[tab] || "Перелік співробітників";
 
 		const canManageVacations = tab === "HR View" && isHrUser(userDoc);
+	 	const includeDepartmentColumn = tab !== "Manager View";
 
 		if (!employees || employees.length === 0) {
 			const emptyRow = createElement("tr", "table-row-empty");
 			const cell = createElement("td", "table-cell-empty", "Немає записів для відображення.");
-			const baseColumns = 7;
+			const baseColumns = 6 + (includeDepartmentColumn ? 1 : 0);
 			cell.colSpan = canManageVacations ? baseColumns + 1 : baseColumns;
 			emptyRow.appendChild(cell);
 			elements.tableBody.appendChild(emptyRow);
@@ -1864,14 +1879,18 @@
 
 		const headRow = createElement("tr");
 		const headCells = [
-			{ label: "Ім'я" },
-			{ label: "Підрозділ" },
+			{ label: "Ім'я" }
+		];
+		if (includeDepartmentColumn) {
+			headCells.push({ label: "Підрозділ" });
+		}
+		headCells.push(
 			{ label: "Посада" },
 			{ label: "Статус" },
 			{ label: "Ближча відпустка" },
 			{ label: "Нарах.", className: "col-earned" },
 			{ label: "Залишок днів" }
-		];
+		);
 		headCells.forEach(cell => {
 			headRow.appendChild(createElement("th", cell.className || "", cell.label));
 		});
@@ -1886,7 +1905,9 @@
 			const row = createElement("tr");
 			const fullName = employee.fullName || `${employee.name} ${employee.surname}`.trim();
 			row.appendChild(createElement("td", "", fullName || "—"));
-			row.appendChild(createElement("td", "", employee.departmentName || "—"));
+			if (includeDepartmentColumn) {
+				row.appendChild(createElement("td", "", employee.departmentName || "—"));
+			}
 			row.appendChild(createElement("td", "", employee.position || "—"));
 			row.appendChild(createElement("td", "", employee.computedStatus || "На роботі"));
 
