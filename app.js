@@ -83,7 +83,6 @@
 		tableTitle: document.getElementById("table-title"),
 		tableHead: document.getElementById("table-head"),
 		tableBody: document.getElementById("table-body"),
-		roleTestBtn: document.getElementById("role-test-btn"),
 		vacationModal: document.getElementById("vacation-manager-modal"),
 		vacationModalClose: document.getElementById("vacation-manager-close"),
 		vacationModalForm: document.getElementById("vacation-manager-form"),
@@ -1705,28 +1704,6 @@
 		toggleHidden(elements.loginError, false);
 	}
 
-	function handleRoleTest() {
-		if (!appState.currentUser) {
-			console.warn("Користувач не авторизований.");
-			return;
-		}
-		const user = appState.currentUser;
-		const tabs = getVisibleTabs(user);
-		console.group("Role Test");
-		console.log("User ID:", user.id);
-		console.log("Roles:", getRoleLabels(user).join(", "));
-		console.log("Available Tabs:", tabs.join(", "));
-		tabs.forEach(tabName => {
-			const employees = getEmployeesForRendering(tabName, user);
-			console.log(`[${tabName}]`, employees.map(emp => ({
-				id: emp.id,
-				name: emp.fullName,
-				status: emp.computedStatus
-			})));
-		});
-		console.groupEnd();
-	}
-
 	function teardownListeners() {
 		appState.listeners.forEach(unsub => {
 			try {
@@ -1835,9 +1812,6 @@
 	function initialize() {
 		if (elements.loginForm) {
 			elements.loginForm.addEventListener("submit", handleLogin);
-		}
-		if (elements.roleTestBtn) {
-			elements.roleTestBtn.addEventListener("click", handleRoleTest);
 		}
 		if (elements.vacationModalForm) {
 			elements.vacationModalForm.addEventListener("submit", handleVacationModalSubmit);
