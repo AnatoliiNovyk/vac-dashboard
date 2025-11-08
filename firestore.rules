@@ -6,7 +6,9 @@ service cloud.firestore {
     // It checks a custom claim, which is the most secure way.
     // We will need to set this claim using a Cloud Function later.
     function isHR() {
-      return request.auth.token.isHR == true;
+      return request.auth != null
+          && request.auth.token != null
+          && request.auth.token.isHR == true;
     }
 
     // Helper function to get user data from 'employees' collection

@@ -46,7 +46,9 @@
 		editingEmployeeId: null,
 		calendarBaseDateIso: null,
 		calendarMonthOffset: 0,
-		basSyncMessages: []
+		basSyncMessages: [],
+		authClaims: null,
+		hasHrCustomClaim: false
 	};
 
 	const basSyncState = {
@@ -2032,6 +2034,28 @@
 		updateModalSaveState();
 	}
 
+	function buildVacationSaveErrorMessage(error) {
+		const isHr = isHrUser(appState.currentUser);
+		const hasHrClaim = Boolean(appState.authClaims?.isHR);
+		const messageText = typeof error?.message === "string" ? error.message : "";
+		if (/property\s+ishr\s+is\s+undefined/i.test(messageText)) {
+			return "Не вдалося зчитати HR-права з токена. Вийдіть та увійдіть повторно або зверніться до адміністратора.";
+		}
+		if (error?.code === "permission-denied") {
+			if (isHr && !hasHrClaim) {
+				return "Не вдалося підтвердити ваші HR-повноваження. Оновіть токен (вийдіть та увійдіть) або зверніться до адміністратора.";
+			}
+			if (isHr) {
+				return "Ваш обліковий запис наразі не має прав HR для зміни відпусток. Зверніться до адміністратора.";
+			}
+			return "У вас немає HR-доступу для редагування відпусток.";
+		}
+		if (messageText) {
+			return `Не вдалося зберегти зміни. Спробуйте ще раз.<br><small>${messageText}</small>`;
+		}
+		return "Не вдалося зберегти зміни. Спробуйте ще раз.";
+	}
+
 	async function commitModalChanges() {
 		const employee = getEmployeeById(modalState.employeeId) || modalState.employeeSnapshot;
 		if (!employee) {
@@ -2149,9 +2173,9 @@
 				employeeId: modalState.employeeId,
 				periodCount: modalState.periods.length
 			});
+			hideModalSuccess();
 			if (elements.vacationModalError) {
-				const extra = error && error.message ? `<br><small>${error.message}</small>` : "";
-				elements.vacationModalError.innerHTML = `Не вдалося зберегти зміни. Спробуйте ще раз.${extra}`;
+				elements.vacationModalError.innerHTML = buildVacationSaveErrorMessage(error);
 				toggleHidden(elements.vacationModalError, false);
 			}
 		}).finally(() => {
