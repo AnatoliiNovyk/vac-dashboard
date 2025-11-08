@@ -405,6 +405,75 @@
 		return el;
 	}
 
+	function normalizeStatusKey(value) {
+		return typeof value === "string" ? value.trim().toLowerCase() : "";
+	}
+
+	const STATUS_BADGE_VARIANTS = {
+		current: {
+			className: "status-badge--current",
+			matches: ["у відпустці", "відпустка", "active", "approved"]
+		},
+		planned: {
+			className: "status-badge--planned",
+			matches: ["заплановано", "запланована", "scheduled", "planned"]
+		},
+		past: {
+			className: "status-badge--past",
+			matches: [normalizeStatusKey(PAST_STATUS_LABEL), "минулі", "минулі відпустки", "past"]
+		},
+		work: {
+			className: "status-badge--work",
+			matches: ["на роботі", "at work", "working", "work"]
+		},
+		pending: {
+			className: "status-badge--pending",
+			matches: ["в очікуванні", "очікує", "pending", "очікування", "awaiting"]
+		},
+		rejected: {
+			className: "status-badge--rejected",
+			matches: ["відхилено", "rejected", "відхилена", "declined", "denied"]
+		},
+		cancelled: {
+			className: "status-badge--cancelled",
+			matches: ["скасовано", "скасована", "cancelled", "canceled", "скасовано hr"]
+		},
+		default: {
+			className: "status-badge--default",
+			matches: []
+		}
+	};
+
+	const STATUS_BADGE_LOOKUP = new Map();
+	Object.entries(STATUS_BADGE_VARIANTS).forEach(([key, variant]) => {
+		if (!Array.isArray(variant.matches)) {
+			return;
+		}
+		variant.matches.forEach(match => {
+			const normalized = normalizeStatusKey(match);
+			if (normalized && !STATUS_BADGE_LOOKUP.has(normalized)) {
+				STATUS_BADGE_LOOKUP.set(normalized, key);
+			}
+		});
+	});
+
+	function getStatusBadgeKey(statusLabel) {
+		const normalized = normalizeStatusKey(statusLabel);
+		if (!normalized) {
+			return "default";
+		}
+		return STATUS_BADGE_LOOKUP.get(normalized) || "default";
+	}
+
+	function createStatusBadge(statusLabel) {
+		const label = typeof statusLabel === "string" && statusLabel.trim().length > 0 ? statusLabel.trim() : "—";
+		const key = getStatusBadgeKey(label);
+		const variant = STATUS_BADGE_VARIANTS[key] || STATUS_BADGE_VARIANTS.default;
+		const badge = createElement("span", `status-badge ${variant.className}`, label);
+		badge.dataset.statusKey = key;
+		return badge;
+	}
+
 	function toggleHidden(element, hidden) {
 		if (!element) {
 			return;
@@ -2200,7 +2269,7 @@
 		}
 		headCells.push(
 			{ label: "Посада" },
-			{ label: "Статус" },
+			{ label: "Статус", className: "table-head--status" },
 			{ label: "Ближча відпустка" },
 			{ label: "Нарах.", className: "col-earned" },
 			{ label: "Залишок днів" }
@@ -2224,7 +2293,10 @@
 				row.appendChild(createElement("td", "", employee.departmentName || "—"));
 			}
 			row.appendChild(createElement("td", "", employee.position || "—"));
-			row.appendChild(createElement("td", "", employee.computedStatus || "На роботі"));
+			const statusLabel = employee.computedStatus || "На роботі";
+			const statusCell = createElement("td", "table-cell--status");
+			statusCell.appendChild(createStatusBadge(statusLabel));
+			row.appendChild(statusCell);
 
 			const upcomingPeriod = (employee.vacationPeriods || [])
 				.filter(period => period.start_date >= todayIso)
@@ -2287,7 +2359,12 @@
 
 		const headRow = createElement("tr");
 		["#", "Період", "Днів", "Статус"].forEach((label, idx) => {
-			const className = idx === 0 ? "col-index" : "";
+			let className = "";
+			if (idx === 0) {
+				className = "col-index";
+			} else if (label === "Статус") {
+				className = "table-head--status";
+			}
 			headRow.appendChild(createElement("th", className, label));
 		});
 		elements.tableHead.appendChild(headRow);
@@ -2449,7 +2526,9 @@
 				row.appendChild(createElement("td", "", formatRange(period.start_date, period.end_date)));
 				row.appendChild(createElement("td", "", String(period.days || computeDays(period.start_date, period.end_date))));
 				const statusLabel = period.computedStatus || getMyViewPeriodStatus(period);
-				row.appendChild(createElement("td", "", statusLabel));
+				const statusCell = createElement("td", "table-cell--status");
+				statusCell.appendChild(createStatusBadge(statusLabel));
+				row.appendChild(statusCell);
 				elements.tableBody.appendChild(row);
 			});
 		}

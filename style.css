@@ -1458,6 +1458,15 @@ select.form-control {
     width: 100%;
     justify-content: center;
   }
+
+  .vacations-table td.table-cell--status {
+    text-align: center;
+  }
+
+  .table-cell--status .status-badge {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .table-container {
@@ -1483,6 +1492,19 @@ select.form-control {
   font-size: var(--font-size-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.vacations-table th.table-head--status {
+  text-align: center;
+}
+
+.vacations-table td.table-cell--status {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.table-cell--status .status-badge {
+  margin: 0 auto;
 }
 
 .vacations-table tbody tr:hover {
@@ -2034,6 +2056,74 @@ select.form-control {
 }
 
 /* Status badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-16);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  border: 1px solid transparent;
+  background-color: rgba(var(--color-info-rgb), 0.15);
+  color: var(--color-info);
+  white-space: nowrap;
+  min-width: 96px;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.status-badge--current {
+  background-color: var(--color-success);
+  border-color: rgba(var(--color-success-rgb), 0.35);
+  color: var(--color-btn-primary-text);
+}
+
+.status-badge--planned {
+  background-color: var(--color-warning);
+  border-color: rgba(var(--color-warning-rgb), 0.35);
+  color: var(--color-btn-primary-text);
+}
+
+.status-badge--past {
+  background-color: #90a4ae;
+  border-color: rgba(144, 164, 174, 0.35);
+  color: var(--color-cream-50);
+}
+
+.status-badge--work {
+  background-color: rgba(var(--color-info-rgb), 0.16);
+  border-color: rgba(var(--color-info-rgb), 0.3);
+  color: var(--color-info);
+}
+
+.status-badge--pending {
+  background-color: rgba(var(--color-warning-rgb), 0.75);
+  border-color: rgba(var(--color-warning-rgb), 0.85);
+  color: var(--color-btn-primary-text);
+}
+
+.status-badge--rejected {
+  background-color: rgba(var(--color-slate-500-rgb), 0.7);
+  border-color: rgba(var(--color-slate-500-rgb), 0.85);
+  color: var(--color-cream-50);
+}
+
+.status-badge--cancelled {
+  background-color: rgba(var(--color-slate-500-rgb), 0.45);
+  border-color: rgba(var(--color-slate-500-rgb), 0.65);
+  color: var(--color-cream-50);
+}
+
+.status-badge--default {
+  background-color: rgba(var(--color-info-rgb), 0.12);
+  border-color: rgba(var(--color-info-rgb), 0.24);
+  color: var(--color-info);
+}
+
+/* Legacy status classes retained for backward compatibility */
 .status {
   font-size: var(--font-size-xs);
   text-transform: uppercase;
