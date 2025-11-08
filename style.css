@@ -1262,6 +1262,10 @@ select.form-control {
   color: var(--color-warning);
   background-color: rgba(var(--color-warning-rgb), 0.18);
 }
+.calendar-day-badge--past {
+  color: #90a4ae;
+  background-color: rgba(144, 164, 174, 0.2);
+}
 
 .calendar-month-label {
   font-weight: var(--font-weight-semibold);
@@ -1314,6 +1318,9 @@ select.form-control {
 .legend-color--planned {
   background-color: var(--color-warning);
 }
+.legend-color--past {
+  background-color: #90a4ae;
+}
 
 .legend-color--empty {
   background-color: rgba(var(--color-info-rgb), 0.4);
@@ -1336,9 +1343,24 @@ select.form-control {
 .table-header {
   padding: var(--space-20);
   border-bottom: 1px solid var(--color-card-border-inner);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-16);
+  flex-wrap: wrap;
 }
 
 .table-header h3 {
+  margin: 0;
+}
+
+.table-header-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.table-header-controls .filter-label {
   margin: 0;
 }
 

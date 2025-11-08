@@ -36,6 +36,7 @@
 			department: "",
 			status: ""
 		},
+		myViewYear: "",
 		editingEmployeeId: null,
 		calendarBaseDateIso: null,
 		calendarMonthOffset: 0
@@ -68,6 +69,8 @@
 
 	let modalSuccessTimer = null;
 
+const PAST_STATUS_LABEL = "Минулі відпустки";
+
 	const appData = {
 		employees: [],
 		departments: [],
@@ -96,6 +99,8 @@
 		tableTitle: document.getElementById("table-title"),
 		tableHead: document.getElementById("table-head"),
 		tableBody: document.getElementById("table-body"),
+		myViewControls: document.getElementById("my-view-controls"),
+		myViewYearFilter: document.getElementById("my-view-year-filter"),
 		vacationModal: document.getElementById("vacation-manager-modal"),
 		vacationModalClose: document.getElementById("vacation-manager-close"),
 		vacationModalForm: document.getElementById("vacation-manager-form"),
@@ -184,6 +189,59 @@
 		}
 		const diff = Math.abs(endDate - startDate);
 		return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+	}
+
+	function periodIntersectsYear(period, year) {
+		if (!period || !period.start_date || !period.end_date || !Number.isFinite(year)) {
+			return false;
+		}
+		const startDate = parseIsoDateToUtc(period.start_date);
+		const endDate = parseIsoDateToUtc(period.end_date);
+		if (!startDate || !endDate) {
+			return false;
+		}
+		const yearStart = createUtcDate(year, 0, 1);
+		const yearEnd = createUtcDate(year, 11, 31);
+		return startDate <= yearEnd && endDate >= yearStart;
+	}
+
+	function getYearsFromPeriods(periods) {
+		if (!Array.isArray(periods)) {
+			return [];
+		}
+		const set = new Set();
+		periods.forEach(period => {
+			const startDate = parseIsoDateToUtc(period?.start_date);
+			const endDate = parseIsoDateToUtc(period?.end_date);
+			if (startDate) {
+				set.add(startDate.getUTCFullYear());
+			}
+			if (endDate) {
+				set.add(endDate.getUTCFullYear());
+			}
+		});
+		return Array.from(set).filter(Number.isFinite).sort((a, b) => b - a);
+	}
+
+	function getMyViewPeriodStatus(period, todayIso = formatDate(new Date())) {
+		if (!period || !period.start_date || !period.end_date) {
+			return "";
+		}
+		const startIso = formatDate(period.start_date);
+		const endIso = formatDate(period.end_date);
+		if (!startIso || !endIso) {
+			return "";
+		}
+		if (endIso < todayIso) {
+			return PAST_STATUS_LABEL;
+		}
+		if (startIso <= todayIso && endIso >= todayIso) {
+			return "У відпустці";
+		}
+		if (startIso > todayIso) {
+			return "Заплановано";
+		}
+		return PAST_STATUS_LABEL;
 	}
 
 	function createUtcDate(year, monthIndex, day) {
@@ -1648,6 +1706,8 @@
 
 		const todayIso = formatDate(new Date());
 		const statusFilter = options.ignoreFilters ? "" : appState.filters?.status || "";
+		const includePast = Boolean(options.includePast);
+		const yearFilter = Number.isFinite(options.yearFilter) ? options.yearFilter : null;
 		const relevantPeriods = [];
 
 		// Collect only active or upcoming periods so the month grid mirrors the filtered dataset.
@@ -1662,13 +1722,17 @@
 				if (!startIso || !endIso) {
 					return;
 				}
-				const periodStatus = startIso <= todayIso && endIso >= todayIso
-					? "У відпустці"
-					: startIso > todayIso
-						? "Заплановано"
-						: "На роботі";
-				if (!statusFilter && periodStatus === "На роботі") {
+				if (yearFilter !== null && !periodIntersectsYear(period, yearFilter)) {
 					return;
+				}
+				let periodStatus = "Заплановано";
+				if (endIso < todayIso) {
+					if (!includePast) {
+						return;
+					}
+					periodStatus = PAST_STATUS_LABEL;
+				} else if (startIso <= todayIso && endIso >= todayIso) {
+					periodStatus = "У відпустці";
 				}
 				if (statusFilter && periodStatus !== statusFilter) {
 					return;
@@ -1687,7 +1751,10 @@
 		const candidateIso = relevantPeriods
 			.map(period => (period.status === "У відпустці" && period.start_date <= todayIso ? todayIso : period.start_date))
 			.sort()[0];
-		const baseDateIso = candidateIso || fallbackIso;
+		let baseDateIso = candidateIso || fallbackIso;
+		if (includePast && yearFilter !== null) {
+			baseDateIso = `${String(yearFilter).padStart(4, "0")}-01-01`;
+		}
 		if (appState.calendarBaseDateIso !== baseDateIso) {
 			appState.calendarBaseDateIso = baseDateIso;
 			appState.calendarMonthOffset = 0;
@@ -1709,7 +1776,8 @@
 		let cursor = gridStart;
 		const summary = {
 			current: new Set(),
-			planned: new Set()
+			planned: new Set(),
+			past: new Set()
 		};
 
 		for (let i = 0; i < cellCount; i += 1) {
@@ -1738,6 +1806,7 @@
 				const badgeContainer = createElement("div", "calendar-day-badges");
 				const currentEntries = [];
 				const plannedEntries = [];
+				const pastEntries = [];
 				dayStatuses.forEach(period => {
 					if (period.status === "У відпустці") {
 						currentEntries.push(period);
@@ -1745,6 +1814,9 @@
 					} else if (period.status === "Заплановано") {
 						plannedEntries.push(period);
 						summary.planned.add(period.employeeId);
+					} else if (period.status === PAST_STATUS_LABEL) {
+						pastEntries.push(period);
+						summary.past.add(period.employeeId);
 					}
 				});
 
@@ -1770,6 +1842,17 @@
 						.join("\n");
 					badgeContainer.appendChild(badge);
 				}
+				if (pastEntries.length > 0) {
+					const badge = createElement(
+						"div",
+						"calendar-day-badge calendar-day-badge--past",
+						String(pastEntries.length)
+					);
+					badge.title = pastEntries
+						.map(entry => `${entry.employeeName} — ${formatRange(entry.start_date, entry.end_date)}`)
+						.join("\n");
+					badgeContainer.appendChild(badge);
+				}
 				day.appendChild(badgeContainer);
 			}
 
@@ -1783,9 +1866,10 @@
 		prevBtn.type = "button";
 		prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
 		prevBtn.disabled = offset <= -maxOffset;
+		const scheduleRerender = () => renderTeamCalendar(employees, options);
 		prevBtn.addEventListener("click", () => {
 			appState.calendarMonthOffset = Math.max(offset - 1, -maxOffset);
-			renderTeamCalendar(employees);
+			scheduleRerender();
 		});
 
 		const nextBtn = createElement("button", "btn btn--secondary btn--icon calendar-nav-btn");
@@ -1794,7 +1878,7 @@
 		nextBtn.disabled = offset >= maxOffset;
 		nextBtn.addEventListener("click", () => {
 			appState.calendarMonthOffset = Math.min(offset + 1, maxOffset);
-			renderTeamCalendar(employees);
+			scheduleRerender();
 		});
 
 		const resetBtn = createElement("button", "btn btn--secondary calendar-nav-btn calendar-nav-btn--reset", "Сьогодні");
@@ -1802,7 +1886,7 @@
 		resetBtn.disabled = offset === 0;
 		resetBtn.addEventListener("click", () => {
 			appState.calendarMonthOffset = 0;
-			renderTeamCalendar(employees);
+			scheduleRerender();
 		});
 
 		const monthLabel = createElement("span", "calendar-month-label", formatMonthLabel(monthStart));
@@ -1831,6 +1915,13 @@
 				className: "legend-color legend-color--planned"
 			}
 		];
+		if (includePast) {
+			legendConfig.push({
+				status: PAST_STATUS_LABEL,
+				label: `${PAST_STATUS_LABEL}${summary.past.size ? ` — ${summary.past.size}` : ""}`,
+				className: "legend-color legend-color--past"
+			});
+		}
 
 		legendConfig
 			.filter(item => !statusFilter || statusFilter === item.status)
@@ -1980,30 +2071,87 @@
 		elements.tableHead.appendChild(headRow);
 
 		const periods = getVacationPeriodsForEmployees([userDoc.id]).sort((a, b) => a.start_date.localeCompare(b.start_date));
+		const years = getYearsFromPeriods(periods);
+		const hasYears = years.length > 0;
+		let selectedYear = appState.myViewYear || "";
+		if (selectedYear && !years.includes(Number(selectedYear))) {
+			selectedYear = "";
+			appState.myViewYear = "";
+		}
+		const yearFilterValue = selectedYear ? Number(selectedYear) : null;
+		const filteredPeriods = selectedYear
+			? periods.filter(period => periodIntersectsYear(period, yearFilterValue))
+			: periods.slice();
+
+		if (elements.myViewControls && elements.myViewYearFilter) {
+			if (!hasYears) {
+				toggleHidden(elements.myViewControls, true);
+				elements.myViewControls.setAttribute("aria-hidden", "true");
+				elements.myViewYearFilter.innerHTML = "";
+			} else {
+				toggleHidden(elements.myViewControls, false);
+				elements.myViewControls.setAttribute("aria-hidden", "false");
+				const select = elements.myViewYearFilter;
+				const currentValue = selectedYear || "";
+				select.innerHTML = "";
+				const defaultOption = document.createElement("option");
+				defaultOption.value = "";
+				defaultOption.textContent = "Всі роки";
+				select.appendChild(defaultOption);
+				years.forEach(year => {
+					const option = document.createElement("option");
+					option.value = String(year);
+					option.textContent = String(year);
+					if (String(year) === currentValue) {
+						option.selected = true;
+					}
+					select.appendChild(option);
+				});
+				select.value = currentValue;
+				if (!select.dataset.bound) {
+					select.addEventListener("change", () => {
+						appState.myViewYear = select.value;
+						appState.calendarMonthOffset = 0;
+						renderMyView(appState.currentUser);
+					});
+					select.dataset.bound = "true";
+				}
+			}
+		}
+
 		const personalEmployee = {
 			id: userDoc.id,
 			fullName: userDoc.fullName || `${userDoc.name || ""} ${userDoc.surname || ""}`.trim() || userDoc.id,
-			vacationPeriods: periods
+			vacationPeriods: filteredPeriods
 		};
 
-		if (periods.length === 0) {
+		if (filteredPeriods.length === 0) {
 			const emptyRow = createElement("tr", "table-row-empty");
-			const cell = createElement("td", "table-cell-empty", "Відпусток ще не заплановано.");
+			const message = periods.length === 0
+				? "Відпусток ще не заплановано."
+				: selectedYear
+					? `Відпусток за ${selectedYear} рік не знайдено.`
+					: "Відпусток для вибраного фільтра не знайдено.";
+			const cell = createElement("td", "table-cell-empty", message);
 			cell.colSpan = 4;
 			emptyRow.appendChild(cell);
 			elements.tableBody.appendChild(emptyRow);
 		} else {
-			periods.forEach((period, index) => {
+			filteredPeriods.forEach((period, index) => {
 				const row = createElement("tr");
 				row.appendChild(createElement("td", "col-index", String(index + 1)));
 				row.appendChild(createElement("td", "", formatRange(period.start_date, period.end_date)));
 				row.appendChild(createElement("td", "", String(period.days || computeDays(period.start_date, period.end_date))));
-				row.appendChild(createElement("td", "", computeStatus([period])));
+				row.appendChild(createElement("td", "", getMyViewPeriodStatus(period)));
 				elements.tableBody.appendChild(row);
 			});
 		}
 
-		renderTeamCalendar([personalEmployee], { ignoreFilters: true });
+		renderTeamCalendar([personalEmployee], {
+			ignoreFilters: true,
+			includePast: true,
+			yearFilter: yearFilterValue
+		});
 	}
 
 	function renderMainContent(userDoc) {
@@ -2011,6 +2159,10 @@
 			return;
 		}
 		const currentTab = appState.currentTab;
+		if (currentTab !== "My View" && elements.myViewControls) {
+			toggleHidden(elements.myViewControls, true);
+			elements.myViewControls.setAttribute("aria-hidden", "true");
+		}
 		if (currentTab === "My View") {
 			toggleHidden(elements.statsGrid, true);
 			renderFiltersSection(userDoc, false);
@@ -2182,6 +2334,7 @@
 			appState.isInitialized = false;
 			appState.currentTab = "My View";
 			appState.filters = { department: "", status: "" };
+			appState.myViewYear = "";
 			if (elements.taxIdInput) {
 				elements.taxIdInput.value = "";
 			}
@@ -2200,6 +2353,7 @@
 			appState.isInitialized = true;
 			appState.currentTab = getVisibleTabs(appState.currentUser)[0];
 			appState.filters = { department: "", status: "" };
+			appState.myViewYear = "";
 			showDashboard();
 			setupRealtimeListeners();
 			rerenderUI(appState.currentTab);

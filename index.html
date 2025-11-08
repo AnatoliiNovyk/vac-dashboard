@@ -182,9 +182,15 @@
                     </section>
                     <!-- Table Section -->
                     <section class="table-section" id="table-section">
-                        <div class="table-header">
-                            <h3 id="table-title">Таблиця співробітників</h3>
-                        </div>
+                            <div class="table-header">
+                                <h3 id="table-title">Таблиця співробітників</h3>
+                                <div id="my-view-controls" class="table-header-controls hidden" aria-hidden="true">
+                                    <label for="my-view-year-filter" class="filter-label">Рік</label>
+                                    <select id="my-view-year-filter" class="filter-select">
+                                        <option value="">Всі роки</option>
+                                    </select>
+                                </div>
+                            </div>
                         <div class="table-container">
                             <table class="vacations-table" id="vacations-table">
                                 <thead id="table-head">
