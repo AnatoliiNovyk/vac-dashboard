@@ -82,6 +82,7 @@
 
 	const PAST_STATUS_LABEL = "Минулі відпустки";
 	const MY_VIEW_STATUS_OPTIONS = ["Заплановано", PAST_STATUS_LABEL];
+	const BAS_IMPORT_ACCEPT_EXTENSIONS = ".csv,.json,.xml";
 
 	const appData = {
 		employees: [],
@@ -114,6 +115,10 @@
 		basActions: document.getElementById("bas-actions"),
 		basImportBtn: document.getElementById("bas-import-button"),
 		basExportBtn: document.getElementById("bas-export-button"),
+		basImportFileInput: document.getElementById("bas-import-file"),
+		basImportProgress: document.getElementById("bas-import-progress"),
+		basImportProgressBar: document.getElementById("bas-import-progress-bar"),
+		basImportProgressLabel: document.getElementById("bas-import-progress-label"),
 		basSyncLog: document.getElementById("bas-sync-log"),
 		myViewControls: document.getElementById("my-view-controls"),
 		myViewYearFilter: document.getElementById("my-view-year-filter"),
@@ -495,6 +500,45 @@
 		element.classList.toggle("hidden", hidden);
 	}
 
+	function getBasIntegrationModule() {
+		const module = window?.basIntegration;
+		return module && typeof module === "object" ? module : null;
+	}
+
+	function hideBasImportProgress() {
+		const { basImportProgress, basImportProgressBar, basImportProgressLabel } = elements;
+		if (!basImportProgress) {
+			return;
+		}
+		if (basImportProgressBar) {
+			basImportProgressBar.style.width = "0%";
+			basImportProgressBar.setAttribute("aria-valuenow", "0");
+		}
+		if (basImportProgressLabel) {
+			basImportProgressLabel.textContent = "Готово до імпорту";
+		}
+		toggleHidden(basImportProgress, true);
+		basImportProgress.setAttribute("aria-hidden", "true");
+	}
+
+	function showBasImportProgress(percent, label) {
+		const { basImportProgress, basImportProgressBar, basImportProgressLabel } = elements;
+		if (!basImportProgress) {
+			return;
+		}
+		const value = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
+		if (basImportProgressBar) {
+			const rounded = Math.round(value);
+			basImportProgressBar.style.width = `${rounded}%`;
+			basImportProgressBar.setAttribute("aria-valuenow", String(rounded));
+		}
+		if (basImportProgressLabel && typeof label === "string" && label.trim().length > 0) {
+			basImportProgressLabel.textContent = label.trim();
+		}
+		toggleHidden(basImportProgress, false);
+		basImportProgress.setAttribute("aria-hidden", "false");
+	}
+
 	function isBasSyncEnabled() {
 		return Boolean(FEATURE_FLAGS.BAS_SYNC_ENABLED);
 	}
@@ -561,8 +605,69 @@
 		toggleHidden(elements.basSyncLog, false);
 	}
 
-	function handleBasImportClick() {
-		appendBasLog("info", "Імпорт BAS наразі в процесі налаштування. Продовжуйте роботу, а оновлення з'являться найближчим часом.");
+	function handleBasImportClick(event) {
+		if (event) {
+			event.preventDefault();
+		}
+		const input = elements.basImportFileInput;
+		if (!input) {
+			appendBasLog("error", "Не вдалося ініціалізувати вибір файлу для імпорту BAS.");
+			return;
+		}
+		const integration = getBasIntegrationModule();
+		const acceptParts = [];
+		if (Array.isArray(integration?.SUPPORTED_INPUT_FORMATS) && integration.SUPPORTED_INPUT_FORMATS.length > 0) {
+			acceptParts.push(...integration.SUPPORTED_INPUT_FORMATS);
+		}
+		if (typeof BAS_IMPORT_ACCEPT_EXTENSIONS === "string" && BAS_IMPORT_ACCEPT_EXTENSIONS.length > 0) {
+			acceptParts.push(BAS_IMPORT_ACCEPT_EXTENSIONS);
+		}
+		if (acceptParts.length > 0) {
+			input.setAttribute("accept", acceptParts.join(","));
+		} else {
+			input.removeAttribute("accept");
+		}
+		input.value = "";
+		input.click();
+	}
+
+	async function handleBasImportFileSelected(event) {
+		const input = event?.target;
+		const files = input?.files;
+		const file = files && files.length > 0 ? files[0] : null;
+		if (!file) {
+			return;
+		}
+		const fileName = file.name || "Файл";
+		appendBasLog("info", `Розпочато імпорт файлу "${fileName}".`);
+		showBasImportProgress(5, `Обробка файлу "${fileName}"…`);
+		try {
+			const integration = getBasIntegrationModule();
+			if (!integration || typeof integration.importFromBAS !== "function") {
+				throw new Error("Модуль інтеграції BAS недоступний.");
+			}
+			const context = {
+				currentUser: appState.currentUser,
+				timestamp: new Date()
+			};
+			await integration.importFromBAS(file, context);
+			showBasImportProgress(100, `Імпорт файлу "${fileName}" завершено.`);
+			appendBasLog("success", `Імпорт файлу "${fileName}" виконано успішно.`);
+			setTimeout(() => hideBasImportProgress(), 3000);
+		} catch (error) {
+			const message = typeof error?.message === "string" ? error.message : "Невідома помилка імпорту BAS.";
+			const notImplemented = /not yet implemented/i.test(message);
+			const logType = notImplemented ? "warning" : "error";
+			const progressLabel = notImplemented ? "Функція імпорту ще не реалізована." : `Помилка імпорту: ${message}`;
+			showBasImportProgress(100, progressLabel);
+			appendBasLog(logType, notImplemented ? "Імпорт BAS ще не активовано. Очікуйте оновлень." : `Імпорт не завершено: ${message}`);
+			console.error("BAS import failed:", error);
+		}
+		finally {
+			if (input) {
+				input.value = "";
+			}
+		}
 	}
 
 	function handleBasExportClick() {
@@ -576,9 +681,13 @@
 		if (elements.basImportBtn) {
 			elements.basImportBtn.addEventListener("click", handleBasImportClick);
 		}
+		if (elements.basImportFileInput) {
+			elements.basImportFileInput.addEventListener("change", handleBasImportFileSelected);
+		}
 		if (elements.basExportBtn) {
 			elements.basExportBtn.addEventListener("click", handleBasExportClick);
 		}
+		hideBasImportProgress();
 		elements.basActions.dataset.bound = "true";
 	}
 
@@ -592,10 +701,17 @@
 		if (elements.basImportBtn) {
 			elements.basImportBtn.disabled = !visible;
 		}
+		if (elements.basImportFileInput) {
+			elements.basImportFileInput.disabled = !visible;
+			if (!visible) {
+				elements.basImportFileInput.value = "";
+			}
+		}
 		if (elements.basExportBtn) {
 			elements.basExportBtn.disabled = !visible;
 		}
 		if (!visible) {
+			hideBasImportProgress();
 			clearBasLog();
 			return;
 		}
