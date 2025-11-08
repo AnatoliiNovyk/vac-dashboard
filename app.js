@@ -539,6 +539,69 @@
 		basImportProgress.setAttribute("aria-hidden", "false");
 	}
 
+	function logBasImportSummary(summary, fileName) {
+		if (!summary) {
+			return;
+		}
+		const metrics = summary.metrics || {};
+		const totalRows = Number.isFinite(metrics.totalRows) ? metrics.totalRows : 0;
+		const processedRows = Number.isFinite(metrics.processedRows) ? metrics.processedRows : totalRows;
+		const invalidRows = Number.isFinite(metrics.invalidRowCount) ? metrics.invalidRowCount : 0;
+		const employeeCount = Number.isFinite(metrics.employeeCount) ? metrics.employeeCount : 0;
+		const vacationCount = Number.isFinite(metrics.vacationCount) ? metrics.vacationCount : 0;
+		const employeeDuplicates = Number.isFinite(metrics.employeeDuplicates) ? metrics.employeeDuplicates : 0;
+		const vacationDuplicates = Number.isFinite(metrics.vacationDuplicates) ? metrics.vacationDuplicates : 0;
+		const warningCount = Number.isFinite(metrics.warningCount) ? metrics.warningCount : 0;
+		const statusLabelMap = {
+			parsed: "без помилок",
+			parsed_with_warnings: "з попередженнями",
+			parsed_with_errors: "з помилками"
+		};
+		const statusSuffix = statusLabelMap[summary.status] ? ` (${statusLabelMap[summary.status]})` : "";
+		const headerMessage = `Імпорт файлу "${fileName}" завершено${statusSuffix}: оброблено ${processedRows} з ${totalRows} рядків.`;
+		const headerType = summary.status === "parsed" ? "success" : summary.status === "parsed_with_errors" ? "warning" : "info";
+		appendBasLog(headerType, headerMessage);
+		if (employeeCount > 0) {
+			appendBasLog("info", `Дані синхронізовано для ${employeeCount} співробітників.`);
+		}
+		if (vacationCount > 0) {
+			appendBasLog("info", `Імпортовано ${vacationCount} записів відпусток.`);
+		}
+		if (invalidRows > 0) {
+			appendBasLog("warning", `Пропущено ${invalidRows} рядків через помилки в даних.`);
+		}
+		const totalDuplicates = employeeDuplicates + vacationDuplicates;
+		if (totalDuplicates > 0) {
+			appendBasLog("info", `Виявлено ${totalDuplicates} дублікатів (${employeeDuplicates} співробітників, ${vacationDuplicates} відпусток).`);
+		}
+		if (warningCount > 0) {
+			appendBasLog("warning", `Зареєстровано ${warningCount} попереджень під час імпорту.`);
+		}
+		const errorSamples = Array.isArray(summary.errorsSample) ? summary.errorsSample.slice(0, 3) : [];
+		errorSamples.forEach((entry) => {
+			const rowLabel = Number.isFinite(entry?.row) ? `Рядок ${entry.row}` : "Рядок";
+			if (entry?.message) {
+				appendBasLog("error", `${rowLabel}: ${entry.message}`);
+			}
+		});
+		const warningSamples = Array.isArray(summary.warningsSample) ? summary.warningsSample.slice(0, 3) : [];
+		warningSamples.forEach((entry) => {
+			const rowLabel = Number.isFinite(entry?.row) ? `Рядок ${entry.row}` : "Рядок";
+			if (entry?.message) {
+				appendBasLog("warning", `${rowLabel}: ${entry.message}`);
+			}
+		});
+		const duplicateSamples = Array.isArray(summary.duplicatesSample) ? summary.duplicatesSample.slice(0, 3) : [];
+		duplicateSamples.forEach((entry) => {
+			if (entry?.taxId && entry?.startDate && entry?.endDate) {
+				appendBasLog(
+					"info",
+					`Дублікат: ${entry.taxId}, ${entry.startDate} → ${entry.endDate}${entry.vacationType ? ` (${entry.vacationType})` : ""}.`
+				);
+			}
+		});
+	}
+
 	function isBasSyncEnabled() {
 		return Boolean(FEATURE_FLAGS.BAS_SYNC_ENABLED);
 	}
@@ -650,10 +713,21 @@
 				currentUser: appState.currentUser,
 				timestamp: new Date()
 			};
-			await integration.importFromBAS(file, context);
-			showBasImportProgress(100, `Імпорт файлу "${fileName}" завершено.`);
-			appendBasLog("success", `Імпорт файлу "${fileName}" виконано успішно.`);
-			setTimeout(() => hideBasImportProgress(), 3000);
+			const summary = await integration.importFromBAS(file, context);
+			const status = summary?.status || "parsed";
+			const invalidRows = Number.isFinite(summary?.metrics?.invalidRowCount) ? summary.metrics.invalidRowCount : 0;
+			const warningCount = Number.isFinite(summary?.metrics?.warningCount) ? summary.metrics.warningCount : 0;
+			let completionLabel = `Імпорт файлу "${fileName}" завершено успішно.`;
+			if (status === "parsed_with_errors" || invalidRows > 0) {
+				completionLabel = `Імпорт завершено з помилками: пропущено ${invalidRows} рядків.`;
+			} else if (status === "parsed_with_warnings" || warningCount > 0) {
+				completionLabel = `Імпорт завершено з попередженнями. Перевірте лог для деталей.`;
+			}
+			showBasImportProgress(100, completionLabel);
+			logBasImportSummary(summary, fileName);
+			if (status === "parsed" && invalidRows === 0 && warningCount === 0) {
+				setTimeout(() => hideBasImportProgress(), 4000);
+			}
 		} catch (error) {
 			const message = typeof error?.message === "string" ? error.message : "Невідома помилка імпорту BAS.";
 			const notImplemented = /not yet implemented/i.test(message);
