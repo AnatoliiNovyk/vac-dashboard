@@ -1633,7 +1633,7 @@
 		return hasFilters;
 	}
 
-	function renderTeamCalendar(employees) {
+	function renderTeamCalendar(employees, options = {}) {
 		if (!elements.calendar || !elements.calendarControls || !elements.calendarLegend) {
 			return;
 		}
@@ -1647,7 +1647,7 @@
 		}
 
 		const todayIso = formatDate(new Date());
-		const statusFilter = appState.filters?.status || "";
+		const statusFilter = options.ignoreFilters ? "" : appState.filters?.status || "";
 		const relevantPeriods = [];
 
 		// Collect only active or upcoming periods so the month grid mirrors the filtered dataset.
@@ -1970,7 +1970,6 @@
 		}
 		clearNode(elements.tableHead);
 		clearNode(elements.tableBody);
-		clearNode(elements.calendar);
 		elements.tableTitle.textContent = "Мої відпустки";
 
 		const headRow = createElement("tr");
@@ -1981,6 +1980,11 @@
 		elements.tableHead.appendChild(headRow);
 
 		const periods = getVacationPeriodsForEmployees([userDoc.id]).sort((a, b) => a.start_date.localeCompare(b.start_date));
+		const personalEmployee = {
+			id: userDoc.id,
+			fullName: userDoc.fullName || `${userDoc.name || ""} ${userDoc.surname || ""}`.trim() || userDoc.id,
+			vacationPeriods: periods
+		};
 
 		if (periods.length === 0) {
 			const emptyRow = createElement("tr", "table-row-empty");
@@ -1988,27 +1992,18 @@
 			cell.colSpan = 4;
 			emptyRow.appendChild(cell);
 			elements.tableBody.appendChild(emptyRow);
-			elements.calendar.innerHTML = "<em>Відпусток не знайдено.</em>";
-			return;
+		} else {
+			periods.forEach((period, index) => {
+				const row = createElement("tr");
+				row.appendChild(createElement("td", "col-index", String(index + 1)));
+				row.appendChild(createElement("td", "", formatRange(period.start_date, period.end_date)));
+				row.appendChild(createElement("td", "", String(period.days || computeDays(period.start_date, period.end_date))));
+				row.appendChild(createElement("td", "", computeStatus([period])));
+				elements.tableBody.appendChild(row);
+			});
 		}
 
-		periods.forEach((period, index) => {
-			const row = createElement("tr");
-			row.appendChild(createElement("td", "col-index", String(index + 1)));
-			row.appendChild(createElement("td", "", formatRange(period.start_date, period.end_date)));
-			row.appendChild(createElement("td", "", String(period.days || computeDays(period.start_date, period.end_date))));
-			row.appendChild(createElement("td", "", computeStatus([period])));
-			elements.tableBody.appendChild(row);
-		});
-
-		const list = createElement("ul", "calendar-list");
-		periods.forEach(period => {
-			const item = createElement("li", `calendar-list-item calendar-list-item--${isCurrentVacation(period) ? "current" : "planned"}`);
-			item.appendChild(createElement("div", "calendar-list-item-range", formatRange(period.start_date, period.end_date)));
-			item.appendChild(createElement("span", "calendar-list-item-status", isCurrentVacation(period) ? "У відпустці" : "Заплановано"));
-			list.appendChild(item);
-		});
-		elements.calendar.appendChild(list);
+		renderTeamCalendar([personalEmployee], { ignoreFilters: true });
 	}
 
 	function renderMainContent(userDoc) {
