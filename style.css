@@ -1355,13 +1355,34 @@ select.form-control {
 }
 
 .table-header-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-8);
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-12);
 }
 
 .table-header-controls .filter-label {
   margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.my-view-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 140px;
+}
+
+.filter-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  white-space: nowrap;
+}
+
+.filter-reset-btn i {
+  font-size: var(--font-size-sm);
 }
 
 .filter-select {
@@ -1399,7 +1420,12 @@ select.form-control {
   cursor: not-allowed;
 }
 
-.table-header-controls[data-empty-year="true"] .filter-select:not(:focus) {
+.filter-select[data-active="true"]:not(:focus) {
+  border-color: rgba(var(--color-teal-500-rgb), 0.9);
+  box-shadow: 0 0 0 2px rgba(var(--color-teal-500-rgb), 0.2);
+}
+
+.table-header-controls[data-empty-state="true"] .filter-select:not(:focus) {
   border-color: rgba(var(--color-warning-rgb), 0.8);
   box-shadow: 0 0 0 2px rgba(var(--color-warning-rgb), 0.2);
 }
@@ -1416,6 +1442,22 @@ select.form-control {
 
 [data-color-scheme="light"] .filter-select {
   background-image: var(--select-caret-light);
+}
+
+@media (max-width: 768px) {
+  .table-header-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .my-view-filter-group {
+    flex: 1 1 140px;
+  }
+
+  .filter-reset-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .table-container {

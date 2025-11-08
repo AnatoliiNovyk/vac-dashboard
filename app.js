@@ -37,6 +37,7 @@
 			status: ""
 		},
 		myViewYear: "",
+		myViewStatus: "",
 		editingEmployeeId: null,
 		calendarBaseDateIso: null,
 		calendarMonthOffset: 0
@@ -70,6 +71,7 @@
 	let modalSuccessTimer = null;
 
 	const PAST_STATUS_LABEL = "Минулі відпустки";
+	const MY_VIEW_STATUS_OPTIONS = ["Заплановано", PAST_STATUS_LABEL];
 
 	const appData = {
 		employees: [],
@@ -101,6 +103,8 @@
 		tableBody: document.getElementById("table-body"),
 		myViewControls: document.getElementById("my-view-controls"),
 		myViewYearFilter: document.getElementById("my-view-year-filter"),
+		myViewStatusFilter: document.getElementById("my-view-status-filter"),
+		myViewResetFilters: document.getElementById("my-view-reset-filters"),
 		vacationModal: document.getElementById("vacation-manager-modal"),
 		vacationModalClose: document.getElementById("vacation-manager-close"),
 		vacationModalForm: document.getElementById("vacation-manager-form"),
@@ -500,6 +504,108 @@
 			renderMyView(currentUser);
 		}
 		return sanitized;
+	}
+
+	function sanitizeMyViewStatus(value) {
+		if (typeof value !== "string") {
+			return "";
+		}
+		const trimmed = value.trim();
+		return MY_VIEW_STATUS_OPTIONS.includes(trimmed) ? trimmed : "";
+	}
+
+	function getMyViewStatusStorageKey(userId) {
+		return userId ? `myViewStatus:${userId}` : "";
+	}
+
+	function loadMyViewStatusPreference(userId) {
+		const key = getMyViewStatusStorageKey(userId);
+		if (!key) {
+			return "";
+		}
+		const storage = getLocalStorageSafe();
+		if (!storage) {
+			return "";
+		}
+		const rawValue = storage.getItem(key);
+		return sanitizeMyViewStatus(rawValue || "");
+	}
+
+	function persistMyViewStatusPreference(userId, value) {
+		const key = getMyViewStatusStorageKey(userId);
+		if (!key) {
+			return;
+		}
+		const storage = getLocalStorageSafe();
+		if (!storage) {
+			return;
+		}
+		const sanitized = sanitizeMyViewStatus(value || "");
+		if (sanitized) {
+			storage.setItem(key, sanitized);
+		} else {
+			storage.removeItem(key);
+		}
+	}
+
+	function loadMyViewStatusFromUrl() {
+		try {
+			const url = new URL(window.location.href);
+			return sanitizeMyViewStatus(url.searchParams.get("myViewStatus") || "");
+		} catch (error) {
+			console.warn("Не вдалося прочитати параметр myViewStatus з URL:", error);
+			return "";
+		}
+	}
+
+	function persistMyViewStatusToUrl(value) {
+		try {
+			const sanitized = sanitizeMyViewStatus(value || "");
+			const url = new URL(window.location.href);
+			if (sanitized) {
+				url.searchParams.set("myViewStatus", sanitized);
+			} else {
+				url.searchParams.delete("myViewStatus");
+			}
+			const newUrl = `${url.pathname}${url.search}${url.hash}`;
+			window.history.replaceState({}, "", newUrl);
+		} catch (error) {
+			console.warn("Не вдалося оновити параметр myViewStatus у URL:", error);
+		}
+	}
+
+	function applyMyViewStatusSelection(rawValue, { shouldRerender = true } = {}) {
+		const sanitized = sanitizeMyViewStatus(rawValue || "");
+		const currentUser = appState.currentUser;
+		appState.myViewStatus = sanitized;
+		if (currentUser) {
+			persistMyViewStatusPreference(currentUser.id, sanitized);
+		}
+		persistMyViewStatusToUrl(sanitized);
+		appState.calendarMonthOffset = 0;
+		appState.calendarBaseDateIso = null;
+		if (shouldRerender && currentUser) {
+			renderMyView(currentUser);
+		}
+		return sanitized;
+	}
+
+	function resetMyViewFilters() {
+		const currentUser = appState.currentUser;
+		appState.myViewYear = "";
+		appState.myViewStatus = "";
+		const userId = currentUser?.id;
+		if (userId) {
+			persistMyViewYearPreference(userId, "");
+			persistMyViewStatusPreference(userId, "");
+		}
+		persistMyViewYearToUrl("");
+		persistMyViewStatusToUrl("");
+		appState.calendarMonthOffset = 0;
+		appState.calendarBaseDateIso = null;
+		if (currentUser) {
+			renderMyView(currentUser);
+		}
 	}
 
 	function hideModalSuccess() {
@@ -1799,7 +1905,11 @@
 		}
 
 		const todayIso = formatDate(new Date());
-		const statusFilter = options.ignoreFilters ? "" : appState.filters?.status || "";
+		const statusFilter = Object.prototype.hasOwnProperty.call(options, "statusFilterOverride")
+			? sanitizeMyViewStatus(options.statusFilterOverride || "")
+			: options.ignoreFilters
+				? ""
+				: appState.filters?.status || "";
 		const includePast = Boolean(options.includePast);
 		const yearFilter = Number.isFinite(options.yearFilter) ? options.yearFilter : null;
 		const yearStartDate = yearFilter !== null ? createUtcDate(yearFilter, 0, 1) : null;
@@ -2196,13 +2306,26 @@
 		}
 		optionYears.sort((a, b) => b - a);
 		const yearFilterValue = selectedYear ? Number(selectedYear) : null;
-		const filteredPeriods = yearFilterValue !== null
+		const yearFilteredPeriods = yearFilterValue !== null
 			? periods.filter(period => periodIntersectsYear(period, yearFilterValue))
 			: periods.slice();
+		const periodsWithStatus = yearFilteredPeriods.map(period => ({
+			...period,
+			computedStatus: getMyViewPeriodStatus(period)
+		}));
+		const selectedStatus = sanitizeMyViewStatus(appState.myViewStatus);
+		const filteredPeriods = selectedStatus
+			? periodsWithStatus.filter(period => period.computedStatus === selectedStatus)
+			: periodsWithStatus;
+		const hasFiltersApplied = Boolean(selectedYear || selectedStatus);
 
-		if (elements.myViewControls && elements.myViewYearFilter) {
-			elements.myViewControls.classList.remove("hidden");
+		if (elements.myViewControls) {
+			toggleHidden(elements.myViewControls, false);
 			elements.myViewControls.setAttribute("aria-hidden", "false");
+			elements.myViewControls.setAttribute("data-empty-state", !filteredPeriods.length && hasFiltersApplied ? "true" : "false");
+		}
+
+		if (elements.myViewYearFilter) {
 			const select = elements.myViewYearFilter;
 			const previousValue = select.value;
 			select.innerHTML = "";
@@ -2221,13 +2344,7 @@
 				select.appendChild(option);
 			});
 			select.value = selectedYear;
-			const noDataTooltip = !filteredPeriods.length && selectedYear ? "У вибраному році відпусток немає." : "";
-			if (noDataTooltip) {
-				select.setAttribute("title", noDataTooltip);
-			} else {
-				select.removeAttribute("title");
-			}
-			elements.myViewControls.setAttribute("data-empty-year", !filteredPeriods.length && selectedYear ? "true" : "false");
+			select.dataset.active = selectedYear ? "true" : "false";
 			if (!select.dataset.bound) {
 				select.addEventListener("change", event => {
 					applyMyViewYearSelection(event.target.value);
@@ -2235,7 +2352,6 @@
 				select.dataset.bound = "true";
 			}
 			if (previousValue !== select.value) {
-				// ensure persisted selection matches sanitized option when user data updates
 				const normalizedValue = sanitizeYearValue(select.value);
 				select.value = normalizedValue;
 				appState.myViewYear = normalizedValue;
@@ -2245,6 +2361,68 @@
 				}
 				persistMyViewYearToUrl(normalizedValue);
 			}
+		}
+
+		if (elements.myViewStatusFilter) {
+			const statusSelect = elements.myViewStatusFilter;
+			const previousStatus = statusSelect.value;
+			statusSelect.innerHTML = "";
+			const statusOptions = [
+				{ value: "", label: "Всі статуси" },
+				...MY_VIEW_STATUS_OPTIONS.map(option => ({ value: option, label: option }))
+			];
+			statusOptions.forEach(option => {
+				const node = document.createElement("option");
+				node.value = option.value;
+				node.textContent = option.label;
+				if (option.value === selectedStatus) {
+					node.selected = true;
+				}
+				statusSelect.appendChild(node);
+			});
+			statusSelect.value = selectedStatus;
+			statusSelect.dataset.active = selectedStatus ? "true" : "false";
+			if (!statusSelect.dataset.bound) {
+				statusSelect.addEventListener("change", event => {
+					applyMyViewStatusSelection(event.target.value);
+				});
+				statusSelect.dataset.bound = "true";
+			}
+			if (previousStatus !== statusSelect.value) {
+				const normalizedStatus = sanitizeMyViewStatus(statusSelect.value);
+				statusSelect.value = normalizedStatus;
+				appState.myViewStatus = normalizedStatus;
+				const currentUser = appState.currentUser;
+				if (currentUser) {
+					persistMyViewStatusPreference(currentUser.id, normalizedStatus);
+				}
+				persistMyViewStatusToUrl(normalizedStatus);
+			}
+		}
+
+		const noDataTooltip = !filteredPeriods.length && hasFiltersApplied ? "Відпустків не знайдено для вибраних фільтрів." : "";
+		if (elements.myViewYearFilter) {
+			if (noDataTooltip) {
+				elements.myViewYearFilter.setAttribute("title", noDataTooltip);
+			} else {
+				elements.myViewYearFilter.removeAttribute("title");
+			}
+		}
+		if (elements.myViewStatusFilter) {
+			if (noDataTooltip) {
+				elements.myViewStatusFilter.setAttribute("title", noDataTooltip);
+			} else {
+				elements.myViewStatusFilter.removeAttribute("title");
+			}
+		}
+
+		if (elements.myViewResetFilters) {
+			if (!elements.myViewResetFilters.dataset.bound) {
+				elements.myViewResetFilters.addEventListener("click", () => resetMyViewFilters());
+				elements.myViewResetFilters.dataset.bound = "true";
+			}
+			elements.myViewResetFilters.disabled = !hasFiltersApplied;
+			elements.myViewResetFilters.setAttribute("aria-disabled", elements.myViewResetFilters.disabled ? "true" : "false");
 		}
 
 		const personalEmployee = {
@@ -2257,7 +2435,7 @@
 			const emptyRow = createElement("tr", "table-row-empty");
 			const message = periods.length === 0
 				? "Відпусток ще не заплановано."
-				: selectedYear
+				: hasFiltersApplied
 					? "Відпустків не знайдено."
 					: "Відпусток для вибраного фільтра не знайдено.";
 			const cell = createElement("td", "table-cell-empty", message);
@@ -2270,7 +2448,8 @@
 				row.appendChild(createElement("td", "col-index", String(index + 1)));
 				row.appendChild(createElement("td", "", formatRange(period.start_date, period.end_date)));
 				row.appendChild(createElement("td", "", String(period.days || computeDays(period.start_date, period.end_date))));
-				row.appendChild(createElement("td", "", getMyViewPeriodStatus(period)));
+				const statusLabel = period.computedStatus || getMyViewPeriodStatus(period);
+				row.appendChild(createElement("td", "", statusLabel));
 				elements.tableBody.appendChild(row);
 			});
 		}
@@ -2278,7 +2457,8 @@
 		renderTeamCalendar([personalEmployee], {
 			ignoreFilters: true,
 			includePast: true,
-			yearFilter: yearFilterValue
+			yearFilter: yearFilterValue,
+			statusFilterOverride: selectedStatus
 		});
 	}
 
@@ -2463,9 +2643,11 @@
 			appState.currentTab = "My View";
 			appState.filters = { department: "", status: "" };
 			appState.myViewYear = "";
+			appState.myViewStatus = "";
 			appState.calendarBaseDateIso = null;
 			appState.calendarMonthOffset = 0;
 			persistMyViewYearToUrl("");
+			persistMyViewStatusToUrl("");
 			if (elements.taxIdInput) {
 				elements.taxIdInput.value = "";
 			}
@@ -2496,6 +2678,17 @@
 			} else {
 				persistMyViewYearPreference(appState.currentUser.id, "");
 				persistMyViewYearToUrl("");
+			}
+			const urlStatus = loadMyViewStatusFromUrl();
+			const storedStatus = loadMyViewStatusPreference(appState.currentUser.id);
+			const preferredStatus = urlStatus || storedStatus || "";
+			appState.myViewStatus = preferredStatus;
+			if (preferredStatus) {
+				persistMyViewStatusPreference(appState.currentUser.id, preferredStatus);
+				persistMyViewStatusToUrl(preferredStatus);
+			} else {
+				persistMyViewStatusPreference(appState.currentUser.id, "");
+				persistMyViewStatusToUrl("");
 			}
 			showDashboard();
 			setupRealtimeListeners();

@@ -185,10 +185,24 @@
                             <div class="table-header">
                                 <h3 id="table-title">Таблиця співробітників</h3>
                                 <div id="my-view-controls" class="table-header-controls hidden" aria-hidden="true">
-                                    <label for="my-view-year-filter" class="filter-label">Рік</label>
-                                    <select id="my-view-year-filter" class="filter-select">
-                                        <option value="">Всі роки</option>
-                                    </select>
+                                    <div class="my-view-filter-group">
+                                        <label for="my-view-year-filter" class="filter-label">Рік</label>
+                                        <select id="my-view-year-filter" class="filter-select">
+                                            <option value="">Всі роки</option>
+                                        </select>
+                                    </div>
+                                    <div class="my-view-filter-group">
+                                        <label for="my-view-status-filter" class="filter-label">Статус</label>
+                                        <select id="my-view-status-filter" class="filter-select">
+                                            <option value="">Всі статуси</option>
+                                            <option value="Заплановано">Заплановано</option>
+                                            <option value="Минулі відпустки">Минулі відпустки</option>
+                                        </select>
+                                    </div>
+                                    <button id="my-view-reset-filters" class="btn btn--secondary btn--sm filter-reset-btn" type="button">
+                                        <i class="fas fa-rotate-left"></i>
+                                        <span>Скинути фільтри</span>
+                                    </button>
                                 </div>
                             </div>
                         <div class="table-container">
