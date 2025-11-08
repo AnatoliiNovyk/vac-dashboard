@@ -36,6 +36,8 @@
 		"text/plain",
 	]);
 
+	const SUPPORTED_EXPORT_FORMATS = Object.freeze(["csv", "json", "xml"]);
+
 	const SUPPORTED_EXTENSIONS = Object.freeze([".csv", ".json", ".xml"]);
 	const INVALID_RATIO_THRESHOLD = 0.3;
 
@@ -407,6 +409,255 @@
 		}
 	}
 
+	function ensureDateRange(range) {
+		if (!range || !range.start || !range.end) {
+			throw new Error("Необхідно вказати період експорту.");
+		}
+		const start = toIsoDate(range.start);
+		const end = toIsoDate(range.end);
+		if (!start || !end) {
+			throw new Error("Період експорту містить некоректні дати.");
+		}
+		if (start > end) {
+			throw new Error("Дата початку періоду більша за кінцеву дату.");
+		}
+		return { start, end };
+	}
+
+	function normalizeExportFormat(format) {
+		const normalized = normalizeWhitespace(format).toLowerCase();
+		if (!normalized) {
+			return "csv";
+		}
+		if (!SUPPORTED_EXPORT_FORMATS.includes(normalized)) {
+			throw new Error(
+				`Формат експорту "${format}" не підтримується. Доступні: ${SUPPORTED_EXPORT_FORMATS.join(", ")}.`
+			);
+		}
+		return normalized;
+	}
+
+	function resolveTodayIso(override) {
+		if (override instanceof Date) {
+			return override.toISOString().split("T")[0];
+		}
+		const candidate = override ? toIsoDate(override) : null;
+		if (candidate) {
+			return candidate;
+		}
+		return new Date().toISOString().split("T")[0];
+	}
+
+	function buildEmployeeLookup(employees) {
+		const byTaxId = new Map();
+		const byId = new Map();
+		if (!Array.isArray(employees)) {
+			return { byTaxId, byId };
+		}
+		employees.forEach((employee) => {
+			if (!employee || typeof employee !== "object") {
+				return;
+			}
+			const taxId = normalizeWhitespace(employee.taxId || employee.tax_id || employee.externalId);
+			if (taxId) {
+				byTaxId.set(taxId, employee);
+			}
+			const employeeId = normalizeWhitespace(employee.id || employee.employeeId);
+			if (employeeId) {
+				byId.set(employeeId, employee);
+			}
+		});
+		return { byTaxId, byId };
+	}
+
+	function resolveEmployeeForVacation(vacation, lookup) {
+		if (!vacation || !lookup) {
+			return null;
+		}
+		const taxId = normalizeWhitespace(
+			vacation.employeeTaxId ||
+			vacation.employee_tax_id ||
+			vacation.taxId
+		);
+		if (taxId && lookup.byTaxId.has(taxId)) {
+			return lookup.byTaxId.get(taxId);
+		}
+		const employeeId = normalizeWhitespace(
+			vacation.employeeId ||
+			vacation.employee_id
+		);
+		if (employeeId && lookup.byId.has(employeeId)) {
+			return lookup.byId.get(employeeId);
+		}
+		return null;
+	}
+
+	function determineVacationStatus(vacation, todayIso) {
+		const explicitStatus = normalizeStatus(vacation?.status || vacation?.vacationStatus);
+		if (explicitStatus) {
+			return explicitStatus;
+		}
+		const start = toIsoDate(vacation?.startDate || vacation?.start_date);
+		const end = toIsoDate(vacation?.endDate || vacation?.end_date);
+		if (!start || !end) {
+			return "На роботі";
+		}
+		const today = todayIso || resolveTodayIso();
+		if (today >= start && today <= end) {
+			return "У відпустці";
+		}
+		if (today < start) {
+			return "Заплановано";
+		}
+		return "На роботі";
+	}
+
+	function rangesIntersect(startA, endA, startB, endB) {
+		return startA <= endB && endA >= startB;
+	}
+
+	function computeVacationDurationDays(vacation) {
+		const provided = parseInteger(
+			vacation?.durationDays ??
+			vacation?.vacationDays ??
+			vacation?.days ??
+			vacation?.duration
+		);
+		if (provided !== null) {
+			return provided;
+		}
+		const start = toIsoDate(vacation?.startDate || vacation?.start_date);
+		const end = toIsoDate(vacation?.endDate || vacation?.end_date);
+		if (!start || !end) {
+			return null;
+		}
+		const startDate = new Date(`${start}T00:00:00Z`);
+		const endDate = new Date(`${end}T00:00:00Z`);
+		const diff = endDate.getTime() - startDate.getTime();
+		if (!Number.isFinite(diff) || diff < 0) {
+			return null;
+		}
+		return Math.round(diff / 86400000) + 1;
+	}
+
+	function escapeCsvValue(value) {
+		const stringValue = value === undefined || value === null ? "" : String(value);
+		if (/[";\n\r]/.test(stringValue)) {
+			return `"${stringValue.replace(/"/g, '""')}"`;
+		}
+		return stringValue;
+	}
+
+	function buildCsvContent(rows) {
+		const headers = [
+			"TaxId",
+			"FullName",
+			"Department",
+			"Position",
+			"VacationType",
+			"Status",
+			"StartDate",
+			"EndDate",
+			"Days",
+		];
+		const lines = [headers.join(";")];
+		rows.forEach((row) => {
+			const line = headers
+				.map((header) => {
+					switch (header) {
+						case "TaxId":
+							return escapeCsvValue(row.taxId);
+						case "FullName":
+							return escapeCsvValue(row.fullName);
+						case "Department":
+							return escapeCsvValue(row.department);
+						case "Position":
+							return escapeCsvValue(row.position);
+						case "VacationType":
+							return escapeCsvValue(row.vacationType);
+						case "Status":
+							return escapeCsvValue(row.status);
+						case "StartDate":
+							return escapeCsvValue(row.startDate);
+						case "EndDate":
+							return escapeCsvValue(row.endDate);
+						case "Days":
+							return escapeCsvValue(row.durationDays);
+						default:
+							return "";
+					}
+				})
+				.join(";");
+			lines.push(line);
+		});
+		return lines.join("\r\n");
+	}
+
+	function buildJsonContent(rows) {
+		return JSON.stringify(rows, null, 2);
+	}
+
+	function buildXmlContent(rows) {
+		const items = rows
+			.map((row) => {
+				return [
+					"\t<Vacation>",
+					`\t\t<TaxId>${escapeXml(row.taxId)}</TaxId>`,
+					`\t\t<FullName>${escapeXml(row.fullName)}</FullName>`,
+					`\t\t<Department>${escapeXml(row.department)}</Department>`,
+					`\t\t<Position>${escapeXml(row.position)}</Position>`,
+					`\t\t<VacationType>${escapeXml(row.vacationType)}</VacationType>`,
+					`\t\t<Status>${escapeXml(row.status)}</Status>`,
+					`\t\t<StartDate>${escapeXml(row.startDate)}</StartDate>`,
+					`\t\t<EndDate>${escapeXml(row.endDate)}</EndDate>`,
+					`\t\t<Days>${escapeXml(row.durationDays)}</Days>`,
+					"\t</Vacation>",
+				].join("\n");
+			})
+			.join("\n");
+		return [
+			"<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+			"<Vacations>",
+			items,
+			"</Vacations>",
+		].join("\n");
+	}
+
+	function escapeXml(value) {
+		const stringValue = value === undefined || value === null ? "" : String(value);
+		return stringValue
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;")
+			.replace(/'/g, "&apos;");
+	}
+
+	function buildStatusBreakdown(rows) {
+		return rows.reduce((accumulator, row) => {
+			const status = row.status || "Невідомо";
+			accumulator[status] = (accumulator[status] || 0) + 1;
+			return accumulator;
+		}, {});
+	}
+
+	function createBlob(content, format) {
+		const mimeType = format === "json"
+			? "application/json"
+			: format === "xml"
+				? "application/xml"
+				: "text/csv";
+		return {
+			blob: new Blob([content], { type: `${mimeType};charset=utf-8` }),
+			mimeType,
+		};
+	}
+
+	function buildFileName(prefix, format, range) {
+		const safePrefix = normalizeWhitespace(prefix) || "bas_export";
+		return `${safePrefix}_${range.start}_${range.end}.${format}`;
+	}
+
 	async function importFromBAS(file, context = {}) {
 		if (!file) {
 			throw new Error("BAS import requires a file input");
@@ -577,19 +828,192 @@
 	}
 
 	async function exportToBAS(dateRange, filters = {}, options = {}) {
-		void filters;
-		void options;
-		if (!dateRange || !dateRange.start || !dateRange.end) {
-			throw new Error("BAS export requires a start and end date");
+		const normalizedRange = ensureDateRange(dateRange);
+		const format = normalizeExportFormat(options.format || filters.format || dateRange.format);
+		const todayIso = resolveTodayIso(options.today || options.currentDate);
+		const dataset = options.dataset && typeof options.dataset === "object" ? options.dataset : {};
+		const employees = Array.isArray(dataset.employees) ? dataset.employees : [];
+		const vacations = Array.isArray(dataset.vacations) ? dataset.vacations : [];
+		const lookup = buildEmployeeLookup(employees);
+		const normalizedFilters = {
+			department: normalizeWhitespace(
+				filters.department ||
+				filters.departmentName ||
+				filters.departmentId ||
+				""
+			),
+			statuses: Array.isArray(filters.statuses)
+				? filters.statuses
+					.map((status) => normalizeStatus(status) || normalizeWhitespace(status))
+					.filter(Boolean)
+				: [],
+		};
+		const statusFilterSet = new Set(
+			normalizedFilters.statuses.map((status) => normalizeStatus(status) || status)
+		);
+		const hasStatusFilter = statusFilterSet.size > 0;
+		const departmentFilter = normalizedFilters.department.toLowerCase();
+		const skipped = [];
+		const exportRows = [];
+		const totalCandidates = vacations.length;
+
+		vacations.forEach((vacation, index) => {
+			const start = toIsoDate(vacation?.startDate || vacation?.start_date);
+			const end = toIsoDate(vacation?.endDate || vacation?.end_date);
+			if (!start || !end) {
+				skipped.push({
+					index: index + 1,
+					reason: "Пропущено відпустку без валідних дат.",
+					vacation,
+				});
+				return;
+			}
+			if (!rangesIntersect(start, end, normalizedRange.start, normalizedRange.end)) {
+				return;
+			}
+			const employee = resolveEmployeeForVacation(vacation, lookup);
+			const taxId = normalizeWhitespace(
+				vacation?.employeeTaxId ||
+				vacation?.employee_tax_id ||
+				employee?.taxId ||
+				employee?.tax_id ||
+				employee?.externalId ||
+				vacation?.employeeId ||
+				vacation?.employee_id
+			);
+			if (!taxId) {
+				skipped.push({
+					index: index + 1,
+					reason: "Відсутній ІПН для відпустки.",
+					vacation,
+				});
+				return;
+			}
+
+			const employeeDepartment = normalizeWhitespace(
+				vacation?.department ||
+				vacation?.departmentName ||
+				vacation?.employeeDepartment ||
+				employee?.departmentName ||
+				employee?.department?.name ||
+				employee?.department ||
+				""
+			);
+			const effectiveDepartmentId = normalizeWhitespace(
+				vacation?.departmentId ||
+				vacation?.department_id ||
+				employee?.departmentId ||
+				employee?.department_id ||
+				""
+			);
+			if (departmentFilter) {
+				const departmentLower = employeeDepartment.toLowerCase();
+				const departmentIdLower = effectiveDepartmentId.toLowerCase();
+				if (departmentLower !== departmentFilter && departmentIdLower !== departmentFilter) {
+					return;
+				}
+			}
+
+			const fullName = normalizeWhitespace(
+				vacation?.employeeFullName ||
+				vacation?.employee_full_name ||
+				employee?.fullName ||
+				[
+					employee?.lastName,
+					employee?.firstName,
+					employee?.middleName,
+				]
+					.filter(Boolean)
+					.join(" ")
+			);
+			if (!fullName) {
+				skipped.push({
+					index: index + 1,
+					reason: "Відсутнє ПІБ співробітника у відпустці.",
+					vacation,
+				});
+				return;
+			}
+
+			const position = normalizeWhitespace(
+				vacation?.position ||
+				vacation?.employeePosition ||
+				employee?.position ||
+				""
+			);
+			const status = determineVacationStatus(vacation, todayIso);
+			if (hasStatusFilter && !statusFilterSet.has(status)) {
+				return;
+			}
+			const vacationType = normalizeWhitespace(vacation?.type || vacation?.vacationType || "");
+			const durationDays = computeVacationDurationDays(vacation);
+
+			exportRows.push({
+				index: index + 1,
+				taxId,
+				fullName,
+				department: employeeDepartment,
+				position,
+				vacationType,
+				status,
+				startDate: start,
+				endDate: end,
+				durationDays: durationDays !== null ? durationDays : "",
+				employeeId: normalizeWhitespace(vacation?.employeeId || vacation?.employee_id || employee?.id || ""),
+				employeeExternalId: normalizeWhitespace(
+					employee?.externalId || employee?.external_id || ""
+				),
+			});
+		});
+
+		if (exportRows.length === 0) {
+			throw new Error("За обраними фільтрами даних для експорту не знайдено.");
 		}
 
-		state.lastExportSummary = {
-			dateRange,
-			status: "pending",
-			timestamp: Date.now(),
-		};
+		let content = "";
+		switch (format) {
+			case "json":
+				content = buildJsonContent(exportRows);
+				break;
+			case "xml":
+				content = buildXmlContent(exportRows);
+				break;
+			case "csv":
+			default:
+				content = buildCsvContent(exportRows);
+				break;
+		}
 
-		throw new Error("exportToBAS is not yet implemented");
+		const { blob, mimeType } = createBlob(content, format);
+		const fileName = buildFileName(options.fileNamePrefix || "bas_export", format, normalizedRange);
+		const summary = {
+			status: "ready",
+			format,
+			createdAt: Date.now(),
+			fileName,
+			records: exportRows.length,
+			totalCandidates,
+			dateRange: normalizedRange,
+			filters: {
+				department: normalizedFilters.department || null,
+				statuses: hasStatusFilter ? Array.from(statusFilterSet) : [],
+			},
+			statusBreakdown: buildStatusBreakdown(exportRows),
+			skippedCount: skipped.length,
+			skippedSample: truncateList(skipped, 5),
+		};
+		state.lastExportSummary = safeClone(summary);
+
+		return {
+			fileName,
+			format,
+			mimeType,
+			blob,
+			size: blob.size,
+			rows: exportRows,
+			summary,
+			content,
+		};
 	}
 
 	function getStateSnapshot() {
@@ -602,6 +1026,7 @@
 
 	window.basIntegration = Object.freeze({
 		SUPPORTED_INPUT_FORMATS,
+		SUPPORTED_EXPORT_FORMATS,
 		importFromBAS,
 		exportToBAS,
 		commitLastImportToFirebase,

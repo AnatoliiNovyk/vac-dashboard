@@ -123,6 +123,53 @@
                 </div>
             </div>
         </div>
+        <!-- BAS Export Modal -->
+        <div id="bas-export-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bas-export-title">
+            <div class="modal-content bas-export-modal">
+                <div class="modal-header">
+                    <h3 id="bas-export-title">Експорт в BAS</h3>
+                    <button type="button" id="bas-export-close" class="modal-close" aria-label="Закрити">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <form id="bas-export-form">
+                    <div class="modal-body">
+                        <div id="bas-export-error" class="bas-export-error hidden" role="alert"></div>
+                        <div class="bas-export-field-grid">
+                            <div class="form-group">
+                                <label for="bas-export-start" class="form-label">Дата з</label>
+                                <input type="date" id="bas-export-start" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="bas-export-end" class="form-label">Дата по</label>
+                                <input type="date" id="bas-export-end" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="bas-export-format" class="form-label">Формат файлу</label>
+                            <select id="bas-export-format" class="form-control"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="bas-export-department" class="form-label">Підрозділ</label>
+                            <select id="bas-export-department" class="form-control">
+                                <option value="">Всі підрозділи</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <span class="form-label">Статуси відпусток</span>
+                            <div id="bas-export-statuses" class="bas-export-statuses"></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="bas-export-cancel" class="btn btn--secondary">Скасувати</button>
+                        <button type="submit" id="bas-export-submit" class="btn btn--primary">
+                            <i class="fas fa-download" aria-hidden="true"></i>
+                            <span class="bas-export-submit-label">Завантажити</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     <!-- Main Content -->
     <main class="main-content">
         <div class="container">

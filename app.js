@@ -53,6 +53,12 @@
 		messages: []
 	};
 
+	const basExportState = {
+		isOpen: false,
+		isBusy: false,
+		formHydrated: false
+	};
+
 	const modalState = {
 		employeeId: null,
 		employeeSnapshot: null,
@@ -83,6 +89,7 @@
 	const PAST_STATUS_LABEL = "Минулі відпустки";
 	const MY_VIEW_STATUS_OPTIONS = ["Заплановано", PAST_STATUS_LABEL];
 	const BAS_IMPORT_ACCEPT_EXTENSIONS = ".csv,.json,.xml";
+	const BAS_EXPORT_STATUS_OPTIONS = ["У відпустці", "Заплановано", "На роботі"];
 
 	const appData = {
 		employees: [],
@@ -120,6 +127,17 @@
 		basImportProgressBar: document.getElementById("bas-import-progress-bar"),
 		basImportProgressLabel: document.getElementById("bas-import-progress-label"),
 		basSyncLog: document.getElementById("bas-sync-log"),
+		basExportModal: document.getElementById("bas-export-modal"),
+		basExportForm: document.getElementById("bas-export-form"),
+		basExportClose: document.getElementById("bas-export-close"),
+		basExportCancel: document.getElementById("bas-export-cancel"),
+		basExportSubmit: document.getElementById("bas-export-submit"),
+		basExportStartInput: document.getElementById("bas-export-start"),
+		basExportEndInput: document.getElementById("bas-export-end"),
+		basExportFormatSelect: document.getElementById("bas-export-format"),
+		basExportDepartmentSelect: document.getElementById("bas-export-department"),
+		basExportStatuses: document.getElementById("bas-export-statuses"),
+		basExportError: document.getElementById("bas-export-error"),
 		myViewControls: document.getElementById("my-view-controls"),
 		myViewYearFilter: document.getElementById("my-view-year-filter"),
 		myViewStatusFilter: document.getElementById("my-view-status-filter"),
@@ -782,8 +800,387 @@
 		}
 	}
 
-	function handleBasExportClick() {
-		appendBasLog("info", "Експорт BAS буде доступний після завершення конфігурації. Дякуємо за терпіння.");
+	function handleBasExportClick(event) {
+		if (event) {
+			event.preventDefault();
+		}
+		openBasExportModal();
+	}
+
+	function openBasExportModal() {
+		if (!elements.basExportModal) {
+			appendBasLog("error", "Діалог експорту BAS недоступний у розмітці.");
+			return;
+		}
+		if (basExportState.isBusy) {
+			return;
+		}
+		ensureBasExportFormHydrated();
+		populateBasExportDateRange();
+		clearBasExportError();
+		setBasExportBusy(false);
+		toggleHidden(elements.basExportModal, false);
+		elements.basExportModal.setAttribute("aria-hidden", "false");
+		basExportState.isOpen = true;
+		const startInput = elements.basExportStartInput;
+		if (startInput) {
+			setTimeout(() => startInput.focus(), 50);
+		}
+	}
+
+	function closeBasExportModal(options = {}) {
+		if (!elements.basExportModal) {
+			return;
+		}
+		setBasExportBusy(false);
+		toggleHidden(elements.basExportModal, true);
+		elements.basExportModal.setAttribute("aria-hidden", "true");
+		basExportState.isOpen = false;
+		if (!options || options.resetError !== false) {
+			clearBasExportError();
+		}
+	}
+
+	function ensureBasExportFormHydrated() {
+		if (!basExportState.formHydrated) {
+			populateBasExportFormatSelect();
+			populateBasExportStatuses();
+			refreshBasExportDepartmentOptions();
+			basExportState.formHydrated = true;
+		} else {
+			refreshBasExportDepartmentOptions();
+		}
+		const lastSummary = getLastBasExportSummary();
+		if (lastSummary?.format && elements.basExportFormatSelect) {
+			const formats = Array.from(elements.basExportFormatSelect.options).map((option) => option.value);
+			if (formats.includes(lastSummary.format)) {
+				elements.basExportFormatSelect.value = lastSummary.format;
+			}
+		}
+	}
+
+	function populateBasExportDateRange() {
+		const startInput = elements.basExportStartInput;
+		const endInput = elements.basExportEndInput;
+		if (!startInput || !endInput) {
+			return;
+		}
+		const lastSummary = getLastBasExportSummary();
+		const range = lastSummary?.dateRange && lastSummary.dateRange.start && lastSummary.dateRange.end
+			? lastSummary.dateRange
+			: getBasExportDefaultRange();
+		startInput.value = range.start || "";
+		endInput.value = range.end || "";
+	}
+
+	function populateBasExportFormatSelect() {
+		const select = elements.basExportFormatSelect;
+		if (!select) {
+			return;
+		}
+		const integration = getBasIntegrationModule();
+		const formats = Array.isArray(integration?.SUPPORTED_EXPORT_FORMATS) && integration.SUPPORTED_EXPORT_FORMATS.length > 0
+			? integration.SUPPORTED_EXPORT_FORMATS
+			: ["csv", "json", "xml"];
+		const previousValue = select.value || "";
+		clearNode(select);
+		formats.forEach((format) => {
+			const option = document.createElement("option");
+			option.value = format;
+			option.textContent = format.toUpperCase();
+			select.appendChild(option);
+		});
+		const lastSummary = getLastBasExportSummary();
+		const preferred = lastSummary?.format || previousValue;
+		if (preferred && formats.includes(preferred)) {
+			select.value = preferred;
+		} else if (formats.length > 0) {
+			select.value = formats[0];
+		}
+	}
+
+	function populateBasExportStatuses() {
+		const container = elements.basExportStatuses;
+		if (!container) {
+			return;
+		}
+		if (container.dataset.initialized === "true") {
+			return;
+		}
+		clearNode(container);
+		BAS_EXPORT_STATUS_OPTIONS.forEach((status) => {
+			const label = document.createElement("label");
+			label.className = "bas-export-statuses__item";
+			const checkbox = document.createElement("input");
+			checkbox.type = "checkbox";
+			checkbox.value = status;
+			checkbox.checked = true;
+			const text = document.createElement("span");
+			text.textContent = status;
+			label.appendChild(checkbox);
+			label.appendChild(text);
+			container.appendChild(label);
+		});
+		container.dataset.initialized = "true";
+	}
+
+	function refreshBasExportDepartmentOptions() {
+		const select = elements.basExportDepartmentSelect;
+		if (!select) {
+			return;
+		}
+		const departments = Array.isArray(appData.departments) ? appData.departments.slice() : [];
+		const previousValue = select.value;
+		clearNode(select);
+		const defaultOption = document.createElement("option");
+		defaultOption.value = "";
+		defaultOption.textContent = "Всі підрозділи";
+		select.appendChild(defaultOption);
+		departments
+			.sort((a, b) => (a.name || "").localeCompare(b.name || "", "uk", { sensitivity: "base" }))
+			.forEach((department) => {
+				const option = document.createElement("option");
+				option.value = department.id || department.name || "";
+				option.textContent = department.name || department.id || option.value;
+				select.appendChild(option);
+			});
+		if (previousValue && Array.from(select.options).some((option) => option.value === previousValue)) {
+			select.value = previousValue;
+		} else {
+			select.value = "";
+		}
+	}
+
+	function getBasExportDefaultRange() {
+		const today = new Date();
+		const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+		const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
+		return {
+			start: formatDate(start),
+			end: formatDate(end)
+		};
+	}
+
+	function getLastBasExportSummary() {
+		const integration = getBasIntegrationModule();
+		if (!integration || typeof integration.getStateSnapshot !== "function") {
+			return null;
+		}
+		try {
+			const snapshot = integration.getStateSnapshot();
+			return snapshot?.lastExportSummary || null;
+		} catch (_error) {
+			return null;
+		}
+	}
+
+	function setBasExportBusy(isBusy) {
+		const busy = Boolean(isBusy);
+		basExportState.isBusy = busy;
+		if (elements.basExportSubmit) {
+			elements.basExportSubmit.disabled = busy;
+			elements.basExportSubmit.setAttribute("aria-busy", busy ? "true" : "false");
+			const labelNode = elements.basExportSubmit.querySelector(".bas-export-submit-label");
+			if (labelNode) {
+				const defaultLabel = labelNode.dataset.defaultLabel || labelNode.textContent || "Завантажити";
+				if (!labelNode.dataset.defaultLabel) {
+					labelNode.dataset.defaultLabel = defaultLabel;
+				}
+				labelNode.textContent = busy ? "Формування…" : labelNode.dataset.defaultLabel;
+			}
+		}
+		if (elements.basExportCancel) {
+			elements.basExportCancel.disabled = busy;
+		}
+		if (elements.basExportClose) {
+			elements.basExportClose.disabled = busy;
+		}
+	}
+
+	function clearBasExportError() {
+		const errorNode = elements.basExportError;
+		if (!errorNode) {
+			return;
+		}
+		errorNode.textContent = "";
+		toggleHidden(errorNode, true);
+	}
+
+	function showBasExportError(message) {
+		const errorNode = elements.basExportError;
+		if (!errorNode) {
+			return;
+		}
+		const text = typeof message === "string" && message.trim().length > 0 ? message.trim() : "Невідома помилка експорту BAS.";
+		errorNode.textContent = text;
+		toggleHidden(errorNode, false);
+	}
+
+	function getBasExportSelectedStatuses() {
+		const container = elements.basExportStatuses;
+		if (!container) {
+			return [];
+		}
+		return Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+	}
+
+	function buildBasExportDataset() {
+		const employeesSource = Array.isArray(appData.employees) ? appData.employees : [];
+		const employeeLookup = new Map();
+		const employees = employeesSource.map((employee) => {
+			const taxIdCandidate = normalizeText(employee.taxId || employee.tax_id || employee.externalId || "");
+			const fullNameCandidate = normalizeText(
+				employee.fullName ||
+				`${employee.surname || ""} ${employee.name || ""}`.trim()
+			);
+			const departmentNameCandidate = normalizeText(employee.departmentName || employee.department || "");
+			const normalizedEmployee = {
+				...employee,
+				taxId: taxIdCandidate || employee.taxId || employee.tax_id || "",
+				fullName: fullNameCandidate || employee.fullName || `${employee.surname || ""} ${employee.name || ""}`.trim(),
+				departmentName: departmentNameCandidate || employee.departmentName || employee.department || ""
+			};
+			employeeLookup.set(employee.id, normalizedEmployee);
+			return normalizedEmployee;
+		});
+		const vacationsSource = Array.isArray(appData.vacationPeriods) ? appData.vacationPeriods : [];
+		const vacations = vacationsSource.map((period) => {
+			const employee = employeeLookup.get(period.employee_id) || null;
+			const parsedDays = Number(period.days);
+			return {
+				...period,
+				employeeId: period.employee_id || "",
+				employeeTaxId: employee?.taxId || "",
+				employeeFullName: employee?.fullName || "",
+				employeeDepartment: employee?.departmentName || employee?.department || "",
+				employeePosition: employee?.position || "",
+				durationDays: Number.isFinite(parsedDays) ? parsedDays : null
+			};
+		});
+		return { employees, vacations };
+	}
+
+	async function handleBasExportFormSubmit(event) {
+		if (event) {
+			event.preventDefault();
+		}
+		if (basExportState.isBusy) {
+			return;
+		}
+		clearBasExportError();
+		const start = elements.basExportStartInput?.value || "";
+		const end = elements.basExportEndInput?.value || "";
+		if (!start || !end) {
+			showBasExportError("Вкажіть період експорту.");
+			return;
+		}
+		if (start > end) {
+			showBasExportError("Дата початку не може бути пізнішою за дату завершення.");
+			return;
+		}
+		const statuses = getBasExportSelectedStatuses();
+		if (statuses.length === 0) {
+			showBasExportError("Оберіть щонайменше один статус відпустки для експорту.");
+			return;
+		}
+		const format = elements.basExportFormatSelect?.value || "csv";
+		const department = elements.basExportDepartmentSelect?.value || "";
+		const integration = getBasIntegrationModule();
+		if (!integration || typeof integration.exportToBAS !== "function") {
+			showBasExportError("Функція експорту BAS недоступна.");
+			return;
+		}
+		const dataset = buildBasExportDataset();
+		setBasExportBusy(true);
+		try {
+			const result = await integration.exportToBAS(
+				{ start, end },
+				{ department, statuses },
+				{ format, dataset }
+			);
+			if (!result) {
+				throw new Error("Експорт не повернув жодних даних.");
+			}
+			downloadBasExportResult(result);
+			logBasExportSummary(result.summary || null);
+			closeBasExportModal({ resetError: true });
+		} catch (error) {
+			const message = typeof error?.message === "string" ? error.message : "Невідома помилка експорту BAS.";
+			showBasExportError(message);
+			appendBasLog("error", `Експорт BAS не виконано: ${message}`);
+			console.error("BAS export failed:", error);
+		} finally {
+			setBasExportBusy(false);
+		}
+	}
+
+	function downloadBasExportResult(result) {
+		if (!result) {
+			return;
+		}
+		const fileName = result.fileName || `bas_export.${result.format || "csv"}`;
+		if (typeof Blob === "function" && result.blob instanceof Blob) {
+			const url = URL.createObjectURL(result.blob);
+			const anchor = document.createElement("a");
+			anchor.href = url;
+			anchor.download = fileName;
+			document.body.appendChild(anchor);
+			anchor.click();
+			document.body.removeChild(anchor);
+			setTimeout(() => URL.revokeObjectURL(url), 0);
+			return;
+		}
+		if (typeof result.content === "string") {
+			const mime = result.mimeType || "text/plain";
+			const fallbackBlob = new Blob([result.content], { type: `${mime};charset=utf-8` });
+			downloadBasExportResult({ ...result, blob: fallbackBlob });
+		}
+	}
+
+	function logBasExportSummary(summary) {
+		if (!summary) {
+			appendBasLog("success", "Експорт BAS виконано.");
+			return;
+		}
+		const count = Number.isFinite(summary.records) ? summary.records : Number(summary.records) || 0;
+		const formatLabel = typeof summary.format === "string" ? summary.format.toUpperCase() : "CSV";
+		appendBasLog("success", `Експорт BAS: сформовано ${count} записів (${formatLabel}).`);
+		if (summary.dateRange?.start && summary.dateRange?.end) {
+			appendBasLog("info", `Період: ${formatRange(summary.dateRange.start, summary.dateRange.end)}.`);
+		}
+		const statuses = Array.isArray(summary.filters?.statuses) ? summary.filters.statuses.filter(Boolean) : [];
+		if (statuses.length > 0) {
+			appendBasLog("info", `Враховано статуси: ${statuses.join(", ")}.`);
+		}
+		if (summary.filters?.department) {
+			appendBasLog("info", `Фільтр підрозділу: ${summary.filters.department}.`);
+		}
+		const breakdownEntries = Object.entries(summary.statusBreakdown || {}).filter(([, value]) => Number.isFinite(value));
+		if (breakdownEntries.length > 0) {
+			const breakdown = breakdownEntries.map(([status, value]) => `${status}: ${value}`).join(", ");
+			appendBasLog("info", `Статистика статусів: ${breakdown}.`);
+		}
+		if (Number.isFinite(summary.skippedCount) && summary.skippedCount > 0) {
+			const sampleReason = summary.skippedSample && summary.skippedSample.length > 0
+				? summary.skippedSample[0].reason || "неповні дані"
+				: "неповні дані";
+			appendBasLog("warning", `Пропущено ${summary.skippedCount} записів (${sampleReason}).`);
+		}
+	}
+
+	function handleBasExportBackdropClick(event) {
+		if (!basExportState.isOpen || basExportState.isBusy) {
+			return;
+		}
+		if (event.target === elements.basExportModal) {
+			closeBasExportModal({ resetError: true });
+		}
+	}
+
+	function handleBasExportKeydown(event) {
+		if (event.key === "Escape" && basExportState.isOpen && !basExportState.isBusy) {
+			closeBasExportModal({ resetError: true });
+		}
 	}
 
 	function ensureBasActionsBindings() {
@@ -799,6 +1196,33 @@
 		if (elements.basExportBtn) {
 			elements.basExportBtn.addEventListener("click", handleBasExportClick);
 		}
+		if (elements.basExportForm) {
+			elements.basExportForm.addEventListener("submit", handleBasExportFormSubmit);
+			elements.basExportForm.addEventListener("input", clearBasExportError);
+			elements.basExportForm.addEventListener("change", clearBasExportError);
+		}
+		if (elements.basExportCancel) {
+			elements.basExportCancel.addEventListener("click", (event) => {
+				event.preventDefault();
+				if (basExportState.isBusy) {
+					return;
+				}
+				closeBasExportModal({ resetError: true });
+			});
+		}
+		if (elements.basExportClose) {
+			elements.basExportClose.addEventListener("click", (event) => {
+				event.preventDefault();
+				if (basExportState.isBusy) {
+					return;
+				}
+				closeBasExportModal({ resetError: true });
+			});
+		}
+		if (elements.basExportModal) {
+			elements.basExportModal.addEventListener("click", handleBasExportBackdropClick);
+		}
+		document.addEventListener("keydown", handleBasExportKeydown);
 		hideBasImportProgress();
 		elements.basActions.dataset.bound = "true";
 	}
@@ -824,6 +1248,7 @@
 		}
 		if (!visible) {
 			hideBasImportProgress();
+			closeBasExportModal({ resetError: true });
 			clearBasLog();
 			return;
 		}
@@ -3044,6 +3469,7 @@
 
 		const departmentsListener = db.collection("departments").onSnapshot(snapshot => {
 			appData.departments = snapshot.docs.map(normalizeDepartmentDoc);
+			refreshBasExportDepartmentOptions();
 			rerenderUI(appState.currentTab);
 		}, error => console.error("Помилка слухача departments:", error));
 		appState.listeners.push(departmentsListener);
