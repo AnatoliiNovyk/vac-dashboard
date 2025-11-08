@@ -1512,6 +1512,10 @@
 			elements.vacationLimitError.textContent = "";
 			toggleHidden(elements.vacationLimitError, true);
 		}
+		if (elements.vacationModalError) {
+			elements.vacationModalError.innerHTML = "";
+			toggleHidden(elements.vacationModalError, true);
+		}
 	}
 
 	function generateTempId() {
@@ -1870,6 +1874,16 @@
 		updateModalSummary();
 		renderModalWarnings();
 		updateModalSaveState();
+		if (elements.vacationModalError && modalState.errors.size === 0) {
+			const shouldWarnClaim = !modalState.isReadOnly && isHrUser(appState.currentUser) && !appState.authClaims?.isHR;
+			if (shouldWarnClaim) {
+				elements.vacationModalError.innerHTML = "Не вдалося підтвердити HR-права. Збереження працюватиме після повторної автентифікації.";
+				toggleHidden(elements.vacationModalError, false);
+			} else {
+				elements.vacationModalError.innerHTML = "";
+				toggleHidden(elements.vacationModalError, true);
+			}
+		}
 		return true;
 	}
 
@@ -2038,6 +2052,9 @@
 		const isHr = isHrUser(appState.currentUser);
 		const hasHrClaim = Boolean(appState.authClaims?.isHR);
 		const messageText = typeof error?.message === "string" ? error.message : "";
+		if (error?.code === "missing-hr-claim") {
+			return "Не вдалося підтвердити ваші HR-повноваження. Оновіть токен (вийдіть та увійдіть) або зверніться до адміністратора.";
+		}
 		if (/property\s+ishr\s+is\s+undefined/i.test(messageText)) {
 			return "Не вдалося зчитати HR-права з токена. Вийдіть та увійдіть повторно або зверніться до адміністратора.";
 		}
@@ -2122,7 +2139,7 @@
 		showModalSuccess("Ліміт і періоди успішно збережено.");
 	}
 
-	function handleVacationModalSubmit(event) {
+	async function handleVacationModalSubmit(event) {
 		if (event) {
 			event.preventDefault();
 		}
@@ -2162,13 +2179,25 @@
 			closeVacationManagerModal();
 			return;
 		}
+		if (elements.vacationModalError && modalState.errors.size === 0) {
+			toggleHidden(elements.vacationModalError, true);
+		}
 		if (elements.vacationModalSave) {
 			elements.vacationModalSave.disabled = true;
 			elements.vacationModalSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Збереження...';
 		}
-		commitModalChanges().then(() => {
+		try {
+			if (isHr && !appState.authClaims?.isHR) {
+				const refreshedClaims = await refreshAuthClaims(auth.currentUser, true);
+				if (!refreshedClaims?.isHR) {
+					const claimError = new Error("HR custom claim is missing");
+					claimError.code = "missing-hr-claim";
+					throw claimError;
+				}
+			}
+			await commitModalChanges();
 			closeVacationManagerModal(true);
-		}).catch(error => {
+		} catch (error) {
 			console.error("Не вдалося зберегти періоди відпустки:", error, {
 				employeeId: modalState.employeeId,
 				periodCount: modalState.periods.length
@@ -2178,12 +2207,12 @@
 				elements.vacationModalError.innerHTML = buildVacationSaveErrorMessage(error);
 				toggleHidden(elements.vacationModalError, false);
 			}
-		}).finally(() => {
+		} finally {
 			if (elements.vacationModalSave) {
 				elements.vacationModalSave.disabled = false;
 				elements.vacationModalSave.innerHTML = '<i class="fas fa-save"></i> Зберегти';
 			}
-		});
+		}
 	}
 
 	function refreshVacationManagerModal() {
@@ -3515,6 +3544,26 @@
 		appState.listeners.push(vacationsListener);
 	}
 
+	async function refreshAuthClaims(user, forceRefresh = false) {
+		if (!user) {
+			appState.authClaims = null;
+			appState.hasHrCustomClaim = false;
+			return null;
+		}
+		try {
+			const tokenResult = await user.getIdTokenResult(forceRefresh);
+			const claims = tokenResult?.claims || {};
+			appState.authClaims = claims;
+			appState.hasHrCustomClaim = Boolean(claims.isHR);
+			return claims;
+		} catch (error) {
+			console.error("Не вдалося оновити кастомні claims користувача:", error);
+			appState.authClaims = null;
+			appState.hasHrCustomClaim = false;
+			return null;
+		}
+	}
+
 	async function handleAuthChange(user) {
 		if (!user) {
 			teardownListeners();
@@ -3526,6 +3575,8 @@
 			appState.myViewStatus = "";
 			appState.calendarBaseDateIso = null;
 			appState.calendarMonthOffset = 0;
+			appState.authClaims = null;
+			appState.hasHrCustomClaim = false;
 			clearBasLog();
 			persistMyViewYearToUrl("");
 			persistMyViewStatusToUrl("");
@@ -3539,6 +3590,7 @@
 		}
 
 		try {
+			await refreshAuthClaims(user);
 			const doc = await db.collection("employees").doc(user.uid).get();
 			if (!doc.exists) {
 				throw new Error("Профіль користувача не знайдено у базі.");
@@ -3570,6 +3622,10 @@
 			} else {
 				persistMyViewStatusPreference(appState.currentUser.id, "");
 				persistMyViewStatusToUrl("");
+			}
+			const userHasHrRole = Boolean(appState.currentUser?.isHR || appState.currentUser?.isHRHead);
+			if (userHasHrRole && !appState.hasHrCustomClaim) {
+				await refreshAuthClaims(user, true);
 			}
 			showDashboard();
 			setupRealtimeListeners();
