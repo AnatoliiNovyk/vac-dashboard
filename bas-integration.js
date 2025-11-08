@@ -37,6 +37,7 @@
 	]);
 
 	const SUPPORTED_EXTENSIONS = Object.freeze([".csv", ".json", ".xml"]);
+	const INVALID_RATIO_THRESHOLD = 0.3;
 
 	const state = {
 		lastImportSummary: null,
@@ -433,6 +434,12 @@
 			errorsSample: [],
 			warningsSample: [],
 			duplicatesSample: [],
+			thresholds: {
+				invalidLimit: INVALID_RATIO_THRESHOLD,
+				invalidRatio: 0,
+			},
+			blocked: false,
+			blockReason: null,
 		};
 
 		try {
@@ -473,6 +480,11 @@
 			summary.metrics.invalidRowCount = normalized.invalidRowCount;
 			summary.metrics.warningCount = normalized.warnings.length;
 
+			const invalidRatio = summary.metrics.totalRows > 0
+				? summary.metrics.invalidRowCount / summary.metrics.totalRows
+				: 0;
+			summary.thresholds.invalidRatio = invalidRatio;
+
 			summary.errorsSample = truncateList(normalized.errors, 10);
 			summary.warningsSample = truncateList(normalized.warnings, 10);
 			summary.duplicatesSample = truncateList(
@@ -481,6 +493,12 @@
 			);
 
 			summary.status = hasErrors ? "parsed_with_errors" : hasWarnings ? "parsed_with_warnings" : "parsed";
+			if (invalidRatio > INVALID_RATIO_THRESHOLD) {
+				summary.blocked = true;
+				summary.status = "blocked";
+				const percentage = Math.round(invalidRatio * 100);
+				summary.blockReason = `Виявлено ${percentage}% невалідних рядків, що перевищує допустимі ${Math.round(INVALID_RATIO_THRESHOLD * 100)}%.`;
+			}
 			summary.completedAt = Date.now();
 
 			state.lastImportPayload = {
@@ -506,6 +524,56 @@
 			state.lastImportSummary = safeClone(summary);
 			throw new Error(message);
 		}
+	}
+
+	function ensureFirebaseFunctions() {
+		const firebase = window?.firebase;
+		if (!firebase || typeof firebase.functions !== "function") {
+			throw new Error("Firebase Functions недоступні у цьому середовищі.");
+		}
+		return firebase.functions();
+	}
+
+	function sanitizePayloadForTransport(payload) {
+		if (!payload) {
+			return payload;
+		}
+		return JSON.parse(JSON.stringify(payload));
+	}
+
+	async function commitLastImportToFirebase(options = {}) {
+		const payload = state.lastImportPayload;
+		const summary = state.lastImportSummary;
+		if (!payload || !summary) {
+			throw new Error("Немає підготовлених даних BAS для синхронізації.");
+		}
+		if (summary.blocked && options.force !== true) {
+			throw new Error(summary.blockReason || "Імпорт заблоковано через критичні помилки.");
+		}
+		const functionsInstance = ensureFirebaseFunctions();
+		const callableName = typeof options.callableName === "string" && options.callableName.trim().length > 0
+			? options.callableName.trim()
+			: "importBasData";
+		const callable = functionsInstance.httpsCallable(callableName);
+		const request = {
+			payload: sanitizePayloadForTransport({
+				employees: payload.employees || [],
+				vacations: payload.vacations || [],
+			}),
+			summary: sanitizePayloadForTransport(summary),
+			options: {
+				dryRun: Boolean(options.dryRun),
+				force: Boolean(options.force),
+			},
+		};
+		const response = await callable(request);
+		const result = response?.data ?? response ?? null;
+		state.lastImportSummary = safeClone({
+			...summary,
+			backendResult: result,
+			backendCompletedAt: Date.now(),
+		});
+		return safeClone(result);
 	}
 
 	async function exportToBAS(dateRange, filters = {}, options = {}) {
@@ -536,6 +604,7 @@
 		SUPPORTED_INPUT_FORMATS,
 		importFromBAS,
 		exportToBAS,
+		commitLastImportToFirebase,
 		getStateSnapshot,
 	});
 })();

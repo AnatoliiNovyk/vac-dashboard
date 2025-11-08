@@ -602,6 +602,32 @@
 		});
 	}
 
+	function logBasCommitResult(result) {
+		if (!result || typeof result !== "object") {
+			return;
+		}
+		const employeesWritten = Number.isFinite(result.employeesWritten) ? result.employeesWritten : 0;
+		const vacationsWritten = Number.isFinite(result.vacationsWritten) ? result.vacationsWritten : 0;
+		const dryRun = Boolean(result.dryRun);
+		const employeeChunks = Number.isFinite(result.employeeChunks) ? result.employeeChunks : 0;
+		const vacationChunks = Number.isFinite(result.vacationChunks) ? result.vacationChunks : 0;
+		if (dryRun) {
+			appendBasLog("info", "Синхронізація виконана в режимі перевірки (dry-run). Дані в базі не змінено.");
+		}
+		if (employeesWritten > 0) {
+			appendBasLog("success", `Оновлено ${employeesWritten} записів співробітників (батчів: ${employeeChunks}).`);
+		}
+		if (vacationsWritten > 0) {
+			appendBasLog("success", `Оновлено ${vacationsWritten} записів відпусток (батчів: ${vacationChunks}).`);
+		}
+		if (employeesWritten === 0 && vacationsWritten === 0 && !dryRun) {
+			appendBasLog("info", "Дані вже були синхронізовані. Нових змін не виявлено.");
+		}
+		if (result.integrationLogId) {
+			appendBasLog("info", `Лог інтеграції збережено (${result.integrationLogId}).`);
+		}
+	}
+
 	function isBasSyncEnabled() {
 		return Boolean(FEATURE_FLAGS.BAS_SYNC_ENABLED);
 	}
@@ -714,27 +740,39 @@
 				timestamp: new Date()
 			};
 			const summary = await integration.importFromBAS(file, context);
-			const status = summary?.status || "parsed";
-			const invalidRows = Number.isFinite(summary?.metrics?.invalidRowCount) ? summary.metrics.invalidRowCount : 0;
-			const warningCount = Number.isFinite(summary?.metrics?.warningCount) ? summary.metrics.warningCount : 0;
-			let completionLabel = `Імпорт файлу "${fileName}" завершено успішно.`;
-			if (status === "parsed_with_errors" || invalidRows > 0) {
-				completionLabel = `Імпорт завершено з помилками: пропущено ${invalidRows} рядків.`;
-			} else if (status === "parsed_with_warnings" || warningCount > 0) {
-				completionLabel = `Імпорт завершено з попередженнями. Перевірте лог для деталей.`;
-			}
-			showBasImportProgress(100, completionLabel);
 			logBasImportSummary(summary, fileName);
-			if (status === "parsed" && invalidRows === 0 && warningCount === 0) {
-				setTimeout(() => hideBasImportProgress(), 4000);
+			if (summary?.blocked) {
+				const reason = summary.blockReason || "Імпорт зупинено через критичні помилки.";
+				showBasImportProgress(100, reason);
+				appendBasLog("error", `Імпорт не виконано: ${reason}`);
+				return;
 			}
+			showBasImportProgress(50, "Передача даних до Firebase…");
+			if (typeof integration.commitLastImportToFirebase !== "function") {
+				throw new Error("Неможливо синхронізувати з Firebase: відсутній commit-метод.");
+			}
+			const backendResult = await integration.commitLastImportToFirebase({ summary });
+			showBasImportProgress(100, "Синхронізацію Firebase завершено.");
+			logBasCommitResult(backendResult);
+			appendBasLog("success", `Імпорт файлу "${fileName}" виконано успішно.`);
+			setTimeout(() => hideBasImportProgress(), 4000);
 		} catch (error) {
 			const message = typeof error?.message === "string" ? error.message : "Невідома помилка імпорту BAS.";
+			const rawCode = typeof error?.code === "string" ? error.code : typeof error?.details?.code === "string" ? error.details.code : "";
+			const functionsCode = rawCode.startsWith("functions/") ? rawCode.replace("functions/", "") : rawCode;
 			const notImplemented = /not yet implemented/i.test(message);
-			const logType = notImplemented ? "warning" : "error";
-			const progressLabel = notImplemented ? "Функція імпорту ще не реалізована." : `Помилка імпорту: ${message}`;
+			const isPrecondition = functionsCode === "failed-precondition";
+			const logType = notImplemented || isPrecondition ? "warning" : "error";
+			const progressLabel = notImplemented
+				? "Функція імпорту ще не реалізована."
+				: isPrecondition
+					? message
+					: `Помилка імпорту: ${message}`;
 			showBasImportProgress(100, progressLabel);
-			appendBasLog(logType, notImplemented ? "Імпорт BAS ще не активовано. Очікуйте оновлень." : `Імпорт не завершено: ${message}`);
+			const logMessage = notImplemented
+				? "Імпорт BAS ще не активовано. Очікуйте оновлень."
+				: `Імпорт не завершено: ${message}`;
+			appendBasLog(logType, logMessage);
 			console.error("BAS import failed:", error);
 		}
 		finally {
