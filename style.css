@@ -1467,6 +1467,11 @@ select.form-control {
     width: 100%;
     justify-content: center;
   }
+
+  .bas-actions__buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .table-container {
@@ -1476,6 +1481,123 @@ select.form-control {
 .vacations-table {
   width: 100%;
   border-collapse: collapse;
+}
+
+.bas-actions {
+  margin-top: var(--space-20);
+  padding: var(--space-20);
+  border-top: 1px solid var(--color-card-border-inner);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  background-color: var(--color-surface);
+}
+
+.bas-actions__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.bas-actions__hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.bas-actions__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  justify-content: space-between;
+}
+
+.bas-actions__button {
+  min-width: 200px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  justify-content: center;
+}
+
+.bas-actions__button--import {
+  background-color: rgba(var(--color-info-rgb), 0.12);
+  color: var(--color-info);
+  border: 1px solid rgba(var(--color-info-rgb), 0.2);
+}
+
+.bas-actions__button--import:hover {
+  background-color: rgba(var(--color-info-rgb), 0.18);
+}
+
+.bas-actions__button--export {
+  background-color: var(--color-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.bas-actions__button--export:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.bas-actions__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.bas-actions__log {
+  border: 1px solid var(--color-card-border-inner);
+  border-radius: var(--radius-base);
+  padding: var(--space-16);
+  background-color: rgba(var(--color-brown-600-rgb), 0.05);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.bas-actions__log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid rgba(var(--color-brown-600-rgb), 0.1);
+}
+
+.bas-actions__log-entry:last-child {
+  border-bottom: none;
+}
+
+.bas-actions__log-icon {
+  flex: 0 0 auto;
+  font-size: var(--font-size-md);
+}
+
+.bas-actions__log-message {
+  flex: 1 1 auto;
+  line-height: var(--line-height-normal);
+}
+
+.bas-actions__log-timestamp {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-4);
+}
+
+.bas-actions__log-entry--success .bas-actions__log-icon {
+  color: var(--color-success);
+}
+
+.bas-actions__log-entry--error .bas-actions__log-icon {
+  color: var(--color-error);
+}
+
+.bas-actions__log-entry--warning .bas-actions__log-icon {
+  color: var(--color-warning);
+}
+
+.bas-actions__log-entry--info .bas-actions__log-icon {
+  color: var(--color-info);
 }
 
 .vacations-table th,

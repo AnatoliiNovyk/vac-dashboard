@@ -14,6 +14,11 @@
 	const db = firebase.firestore(app);
 	const auth = firebase.auth(app);
 	const functions = firebase.functions(app);
+	const FEATURE_FLAGS = {
+		BAS_SYNC_ENABLED: typeof window?.FEATURES?.BAS_SYNC_ENABLED === "boolean"
+			? Boolean(window.FEATURES.BAS_SYNC_ENABLED)
+			: true
+	};
 
 	connectEmulatorsIfNeeded();
 
@@ -40,7 +45,12 @@
 		myViewStatus: "",
 		editingEmployeeId: null,
 		calendarBaseDateIso: null,
-		calendarMonthOffset: 0
+		calendarMonthOffset: 0,
+		basSyncMessages: []
+	};
+
+	const basSyncState = {
+		messages: []
 	};
 
 	const modalState = {
@@ -101,6 +111,10 @@
 		tableTitle: document.getElementById("table-title"),
 		tableHead: document.getElementById("table-head"),
 		tableBody: document.getElementById("table-body"),
+		basActions: document.getElementById("bas-actions"),
+		basImportBtn: document.getElementById("bas-import-button"),
+		basExportBtn: document.getElementById("bas-export-button"),
+		basSyncLog: document.getElementById("bas-sync-log"),
 		myViewControls: document.getElementById("my-view-controls"),
 		myViewYearFilter: document.getElementById("my-view-year-filter"),
 		myViewStatusFilter: document.getElementById("my-view-status-filter"),
@@ -479,6 +493,113 @@
 			return;
 		}
 		element.classList.toggle("hidden", hidden);
+	}
+
+	function isBasSyncEnabled() {
+		return Boolean(FEATURE_FLAGS.BAS_SYNC_ENABLED);
+	}
+
+	function canCurrentUserSyncBas(userDoc) {
+		return Boolean(userDoc?.isHR || userDoc?.isHRHead);
+	}
+
+	function formatBasLogTimestamp(date) {
+		if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+			return "";
+		}
+		return date.toLocaleString("uk-UA", {
+			day: "2-digit",
+			month: "2-digit",
+			year: "numeric",
+			hour: "2-digit",
+			minute: "2-digit"
+		});
+	}
+
+	function clearBasLog() {
+		basSyncState.messages = [];
+		appState.basSyncMessages = [];
+		if (!elements.basSyncLog) {
+			return;
+		}
+		clearNode(elements.basSyncLog);
+		toggleHidden(elements.basSyncLog, true);
+	}
+
+	function appendBasLog(type, message) {
+		if (!elements.basSyncLog || !message) {
+			return;
+		}
+		const entry = {
+			type: typeof type === "string" ? type : "info",
+			message: message.trim(),
+			timestamp: new Date()
+		};
+		basSyncState.messages.push(entry);
+		if (basSyncState.messages.length > 100) {
+			basSyncState.messages.shift();
+		}
+		appState.basSyncMessages = basSyncState.messages.slice();
+		const iconMap = {
+			info: "fas fa-info-circle",
+			success: "fas fa-check-circle",
+			error: "fas fa-times-circle",
+			warning: "fas fa-exclamation-triangle"
+		};
+		const badgeClass = `bas-actions__log-entry bas-actions__log-entry--${entry.type}`;
+		const row = createElement("div", badgeClass);
+		const iconWrapper = createElement("span", "bas-actions__log-icon");
+		iconWrapper.innerHTML = `<i class="${iconMap[entry.type] || iconMap.info}"></i>`;
+		const messageWrapper = createElement("div", "bas-actions__log-message");
+		messageWrapper.textContent = entry.message;
+		const timestampNode = createElement("span", "bas-actions__log-timestamp", formatBasLogTimestamp(entry.timestamp));
+		messageWrapper.appendChild(timestampNode);
+		row.appendChild(iconWrapper);
+		row.appendChild(messageWrapper);
+		elements.basSyncLog.appendChild(row);
+		elements.basSyncLog.scrollTop = elements.basSyncLog.scrollHeight;
+		toggleHidden(elements.basSyncLog, false);
+	}
+
+	function handleBasImportClick() {
+		appendBasLog("info", "Імпорт BAS наразі в процесі налаштування. Продовжуйте роботу, а оновлення з'являться найближчим часом.");
+	}
+
+	function handleBasExportClick() {
+		appendBasLog("info", "Експорт BAS буде доступний після завершення конфігурації. Дякуємо за терпіння.");
+	}
+
+	function ensureBasActionsBindings() {
+		if (!elements.basActions || elements.basActions.dataset.bound === "true") {
+			return;
+		}
+		if (elements.basImportBtn) {
+			elements.basImportBtn.addEventListener("click", handleBasImportClick);
+		}
+		if (elements.basExportBtn) {
+			elements.basExportBtn.addEventListener("click", handleBasExportClick);
+		}
+		elements.basActions.dataset.bound = "true";
+	}
+
+	function renderBasActions(userDoc, currentTab) {
+		if (!elements.basActions) {
+			return;
+		}
+		const visible = currentTab === "HR View" && canCurrentUserSyncBas(userDoc) && isBasSyncEnabled();
+		toggleHidden(elements.basActions, !visible);
+		elements.basActions.setAttribute("aria-hidden", visible ? "false" : "true");
+		if (elements.basImportBtn) {
+			elements.basImportBtn.disabled = !visible;
+		}
+		if (elements.basExportBtn) {
+			elements.basExportBtn.disabled = !visible;
+		}
+		if (!visible) {
+			clearBasLog();
+			return;
+		}
+		ensureBasActionsBindings();
 	}
 
 	function getLocalStorageSafe() {
@@ -2554,6 +2675,7 @@
 			toggleHidden(elements.statsGrid, true);
 			renderFiltersSection(userDoc, false);
 			renderMyView(userDoc);
+			renderBasActions(userDoc, currentTab);
 			return;
 		}
 
@@ -2564,6 +2686,7 @@
 		renderStatsGrid(employees);
 		renderTeamCalendar(employees);
 		renderTeamTable(currentTab, employees, userDoc);
+		renderBasActions(userDoc, currentTab);
 	}
 
 	function rerenderUI(forceTab) {
@@ -2725,6 +2848,7 @@
 			appState.myViewStatus = "";
 			appState.calendarBaseDateIso = null;
 			appState.calendarMonthOffset = 0;
+			clearBasLog();
 			persistMyViewYearToUrl("");
 			persistMyViewStatusToUrl("");
 			if (elements.taxIdInput) {
