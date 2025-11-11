@@ -1516,6 +1516,13 @@
 			elements.vacationModalError.innerHTML = "";
 			toggleHidden(elements.vacationModalError, true);
 		}
+		if (elements.vacationModalSave) {
+			elements.vacationModalSave.disabled = true;
+			elements.vacationModalSave.dataset.lockedByClaims = "false";
+			elements.vacationModalSave.removeAttribute("data-busy");
+			elements.vacationModalSave.title = "";
+			elements.vacationModalSave.innerHTML = '<i class="fas fa-save"></i> Зберегти';
+		}
 	}
 
 	function generateTempId() {
@@ -1879,9 +1886,19 @@
 			if (shouldWarnClaim) {
 				elements.vacationModalError.innerHTML = "Не вдалося підтвердити HR-права. Збереження працюватиме після повторної автентифікації.";
 				toggleHidden(elements.vacationModalError, false);
+				if (elements.vacationModalSave) {
+					elements.vacationModalSave.disabled = true;
+					elements.vacationModalSave.dataset.lockedByClaims = "true";
+					elements.vacationModalSave.title = "Потрібно оновити HR-клейм (вийти та увійти).";
+				}
 			} else {
 				elements.vacationModalError.innerHTML = "";
 				toggleHidden(elements.vacationModalError, true);
+				if (elements.vacationModalSave) {
+					elements.vacationModalSave.disabled = modalState.isReadOnly;
+					elements.vacationModalSave.dataset.lockedByClaims = "false";
+					elements.vacationModalSave.title = "";
+				}
 			}
 		}
 		return true;
@@ -2179,12 +2196,21 @@
 			closeVacationManagerModal();
 			return;
 		}
+		const saveButton = elements.vacationModalSave || null;
+		if (saveButton && saveButton.dataset.lockedByClaims === "true") {
+			if (elements.vacationModalError) {
+				elements.vacationModalError.innerHTML = "Не вдалося підтвердити HR-права. Оновіть сесію та повторіть.";
+				toggleHidden(elements.vacationModalError, false);
+			}
+			return;
+		}
 		if (elements.vacationModalError && modalState.errors.size === 0) {
 			toggleHidden(elements.vacationModalError, true);
 		}
-		if (elements.vacationModalSave) {
-			elements.vacationModalSave.disabled = true;
-			elements.vacationModalSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Збереження...';
+		if (saveButton) {
+			saveButton.disabled = true;
+			saveButton.dataset.busy = "true";
+			saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Збереження...';
 		}
 		try {
 			if (isHr && !appState.authClaims?.isHR) {
@@ -2208,9 +2234,10 @@
 				toggleHidden(elements.vacationModalError, false);
 			}
 		} finally {
-			if (elements.vacationModalSave) {
-				elements.vacationModalSave.disabled = false;
-				elements.vacationModalSave.innerHTML = '<i class="fas fa-save"></i> Зберегти';
+			if (saveButton) {
+				saveButton.disabled = saveButton.dataset.lockedByClaims === "true";
+				saveButton.innerHTML = '<i class="fas fa-save"></i> Зберегти';
+				delete saveButton.dataset.busy;
 			}
 		}
 	}
