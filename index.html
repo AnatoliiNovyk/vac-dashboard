@@ -329,18 +329,12 @@
     <script src="bas-integration.js"></script>
 
     <!-- Legacy app.js (will be removed after migration) -->
-    <!-- <script src="app.js"></script> -->
+    <script src="app.js"></script>
 
     <!-- New modular architecture (ES6 modules) -->
-    <script>
-        console.log("Inline script running");
-        document.title = "INLINE SCRIPT RUNNING";
-        window.onerror = function (msg, url, line) {
-            console.error("Global error: " + msg + " at " + url + ":" + line);
-            document.title = "JS ERROR";
-        };
-    </script>
-    <script type="module" src="js/main.js?v=debug2"></script>
+    <!-- Uncomment when ready to switch:
+    <script type="module" src="js/main.js"></script>
+    -->
 </body>
 
 </html>
