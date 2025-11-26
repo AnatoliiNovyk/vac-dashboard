@@ -52,7 +52,7 @@ async function seedEmployees() {
   if (!employees.length) return;
   const batch = db.batch();
   employees.forEach((employee) => {
-    const docId = String(employee.id);
+    const docId = String(employee.tin); // FIXED: Use tax_id as document ID
     const { first, last } = splitName(employee.name);
     const docRef = db.collection('employees').doc(docId);
     batch.set(docRef, {
