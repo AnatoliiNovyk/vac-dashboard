@@ -3,8 +3,6 @@
  */
 
 // Import core modules
-document.title = "JS LOADED " + new Date().toISOString();
-console.log("JS LOADED");
 import { connectEmulatorsIfNeeded } from './core/config.js';
 import { appState, appData } from './core/state.js';
 
@@ -95,9 +93,7 @@ window.onUserAuthenticated = async (user) => {
         setupListeners();
 
         // Show dashboard and render UI
-        console.log('[main] Calling showDashboard()');
         showDashboard();
-        console.log('[main] showDashboard() called');
         await rerenderUI();
     } catch (error) {
         console.error('[main] Error loading user data:', error);

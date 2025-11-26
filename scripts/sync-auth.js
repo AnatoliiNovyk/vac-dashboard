@@ -43,8 +43,16 @@ async function syncFirestoreToAuth() {
       const uid = doc.id;
 
       try {
-        await auth.getUser(uid);
+        const existingUser = await auth.getUser(uid);
         existingUsers.push(uid);
+
+        // Update custom claims for existing users
+        const customClaims = {
+          isHR: employee.isHR || false,
+          isHRHead: employee.isHRHead || false,
+          isManager: employee.isManager || false
+        };
+        await auth.setCustomUserClaims(uid, customClaims);
       } catch (error) {
         if (error.code === 'auth/user-not-found') {
           const userPayload = {
@@ -55,7 +63,18 @@ async function syncFirestoreToAuth() {
             disabled: false
           };
 
-          creationPromises.push(auth.createUser(userPayload));
+          const createUserPromise = auth.createUser(userPayload).then(async (userRecord) => {
+            // Set custom claims after user creation
+            const customClaims = {
+              isHR: employee.isHR || false,
+              isHRHead: employee.isHRHead || false,
+              isManager: employee.isManager || false
+            };
+            await auth.setCustomUserClaims(userRecord.uid, customClaims);
+            console.log(`  ✓ Створено користувача ${employee.name} (${employee.isHR ? 'HR' : employee.isManager ? 'Manager' : 'Employee'})`);
+          });
+
+          creationPromises.push(createUserPromise);
           createdCount++;
         } else {
           console.error(`Помилка під час перевірки користувача з UID ${uid}:`, error.message);
@@ -66,12 +85,12 @@ async function syncFirestoreToAuth() {
     if (existingUsers.length > 0) {
       console.log(`\nПропущено ${existingUsers.length} користувачів, оскільки вони вже існують в Auth.`);
     }
-    
+
     if (creationPromises.length > 0) {
-        await Promise.all(creationPromises);
-        console.log(`\n✅ Успішно створено ${createdCount} нових користувачів в Firebase Authentication.`);
+      await Promise.all(creationPromises);
+      console.log(`\n✅ Успішно створено ${createdCount} нових користувачів в Firebase Authentication.`);
     } else if (existingUsers.length === employeesSnapshot.docs.length) {
-        console.log('\n✨ Усі співробітники вже синхронізовані з Firebase Authentication.');
+      console.log('\n✨ Усі співробітники вже синхронізовані з Firebase Authentication.');
     }
 
   } catch (error) {

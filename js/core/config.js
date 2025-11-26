@@ -26,6 +26,13 @@ export const MY_VIEW_STATUS_OPTIONS = ["Заплановано", PAST_STATUS_LAB
 export const BAS_IMPORT_ACCEPT_EXTENSIONS = ".csv,.json,.xml";
 export const BAS_EXPORT_STATUS_OPTIONS = ["У відпустці", "Заплановано", "На роботі"];
 
+// BAS sync state
+export const basSyncState = {
+    messages: [],
+    lastImport: null,
+    lastExport: null
+};
+
 /**
  * Connect to Firebase emulators if running in development
  */
