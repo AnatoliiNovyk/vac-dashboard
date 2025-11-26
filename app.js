@@ -2555,7 +2555,7 @@
 		return labels;
 	}
 
-	function getManagerEmployees(managerId) {
+	function getManagerEmployeesFallback(managerId) {
 		if (!managerId) {
 			return [];
 		}
@@ -2579,7 +2579,38 @@
 		return team;
 	}
 
-	function getEmployeesForRendering(tab, userDoc) {
+	async function getManagerEmployees(managerId) {
+		if (!managerId) {
+			return [];
+		}
+		const cacheKey = `teamTree_${managerId}`;
+		const cached = appData[cacheKey];
+		if (cached && Date.now() - cached.timestamp < 300000) {
+			return cached.employees;
+		}
+
+		try {
+			const callable = functions.httpsCallable("getManagerTeam");
+			const result = await callable({ managerId, filters: appState.filters || {} });
+			const { employees, vacations } = result.data;
+
+			appData[cacheKey] = {
+				employees,
+				timestamp: Date.now()
+			};
+
+			// Update vacations for Manager View context if needed
+			// Note: This might be tricky if we rely on global listeners. 
+			// For now, we just use the employees list.
+
+			return employees;
+		} catch (error) {
+			console.error("Error getting manager team:", error);
+			return getManagerEmployeesFallback(managerId);
+		}
+	}
+
+	async function getEmployeesForRendering(tab, userDoc) {
 		const employees = enrichEmployeeData();
 		if (!userDoc) {
 			return employees;
@@ -2602,7 +2633,7 @@
 			filtered = filtered.filter(emp => emp.computedStatus === filters.status);
 		}
 		if (tab === "Manager View") {
-			const teamMembers = getManagerEmployees(userDoc.id);
+			const teamMembers = await getManagerEmployees(userDoc.id);
 			const allowedIds = new Set(teamMembers.map(emp => emp.id));
 			allowedIds.add(userDoc.id);
 			filtered = filtered.filter(emp => allowedIds.has(emp.id));
@@ -3395,7 +3426,7 @@
 		});
 	}
 
-	function renderMainContent(userDoc) {
+	async function renderMainContent(userDoc) {
 		if (!userDoc) {
 			return;
 		}
@@ -3415,14 +3446,14 @@
 		const showFilters = userDoc.isHR || userDoc.isHRHead || userDoc.isManager;
 		renderFiltersSection(userDoc, showFilters);
 
-		const employees = getEmployeesForRendering(currentTab, userDoc);
+		const employees = await getEmployeesForRendering(currentTab, userDoc);
 		renderStatsGrid(employees);
 		renderTeamCalendar(employees);
 		renderTeamTable(currentTab, employees, userDoc);
 		renderBasActions(userDoc, currentTab);
 	}
 
-	function rerenderUI(forceTab) {
+	async function rerenderUI(forceTab) {
 		if (!appState.currentUser) {
 			return;
 		}
@@ -3439,7 +3470,7 @@
 			button.classList.toggle("active", button.textContent === appState.currentTab);
 		});
 		updateUserSummary(userDoc);
-		renderMainContent(userDoc);
+		await renderMainContent(userDoc);
 	}
 
 	function setActiveTab(tabName) {

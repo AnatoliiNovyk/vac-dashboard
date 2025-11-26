@@ -57,5 +57,25 @@ service cloud.firestore {
       // Only HR can add or change departments.
       allow write: if isHR();
     }
+
+    // --- Team Trees Collection Rules ---
+    match /teamTrees/{managerId} {
+      // READ: Only the manager themselves or HR can read their team tree.
+      allow read: if request.auth != null && (
+        request.auth.uid == managerId ||
+        isHR()
+      );
+      
+      // WRITE: Only via Cloud Functions (Admin SDK bypasses rules), so no write access for users.
+      allow write: if false;
+    }
+
+    // --- Integration Logs Collection Rules ---
+    match /integration_logs/{logId} {
+      // READ: Only HR can read logs.
+      allow read: if isHR();
+      // WRITE: Only via Cloud Functions.
+      allow write: if false;
+    }
   }
 }

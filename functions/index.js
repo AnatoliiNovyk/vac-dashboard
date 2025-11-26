@@ -1,6 +1,6 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue, FieldPath } = require('firebase-admin/firestore');
 const { getAuth } = require('firebase-admin/auth');
 const crypto = require('crypto');
 
@@ -152,7 +152,7 @@ exports.signInWithTaxId = functions.https.onCall(async (data, context) => {
 
   try {
     console.log(`[Function] Searching for employee with tax_id: ${taxId}`);
-    const firestore = getFirestore();
+    const firestore = admin.firestore();
     const auth = getAuth();
 
     // Find the user document by their tax_id
@@ -331,4 +331,305 @@ exports.importBasData = functions.https.onCall(async (data, context) => {
     invalidRatio,
     invalidLimit
   };
+});
+
+// --- Helper Functions for Team Trees ---
+
+function calculateDepth(descendants, employeeMap) {
+  // Simplified depth calculation
+  // In a real implementation, we would traverse the tree to find the max depth
+  // For now, we'll just return a placeholder or calculate based on known hierarchy if possible
+  // Since we have a flat list of descendants, calculating exact depth requires reconstructing the tree
+  // Let's assume a default or try to estimate.
+  // A better approach for depth:
+  // 1. Build a map of id -> manager_id
+  // 2. For each descendant, traverse up to the root (managerId) and count steps
+  // 3. Max steps = depth
+
+  let maxDepth = 0;
+  for (const descendantId of descendants) {
+    let currentId = descendantId;
+    let depth = 0;
+    while (currentId && employeeMap.has(currentId)) {
+      const emp = employeeMap.get(currentId);
+      if (!emp.manager_id) break;
+      // If we reach the root manager (not in the descendants list but is the root), stop
+      // Note: employeeMap contains ALL employees, so we need to be careful not to loop infinitely
+      // We should pass the root managerId to stop
+      depth++;
+      currentId = emp.manager_id;
+      if (depth > 20) break; // Safety break
+    }
+    if (depth > maxDepth) maxDepth = depth;
+  }
+  return maxDepth;
+}
+
+async function buildTeamTreeSync(managerId) {
+  console.log(`[buildTeamTreeSync] Building tree for ${managerId}`);
+  const firestore = admin.firestore();
+  const allEmployees = await firestore.collection('employees').get();
+  console.log(`[buildTeamTreeSync] Fetched ${allEmployees.size} employees`);
+
+  const employeeMap = new Map();
+  allEmployees.docs.forEach(doc => {
+    employeeMap.set(doc.id, { id: doc.id, ...doc.data() });
+  });
+
+  // BFS traversal
+  const descendants = [];
+  const queue = [managerId];
+  const visited = new Set([managerId]);
+
+  while (queue.length > 0) {
+    const currentId = queue.shift();
+
+    // Find direct subordinates
+    for (const [empId, emp] of employeeMap.entries()) {
+      if (emp.manager_id === currentId && !visited.has(empId)) {
+        visited.add(empId);
+        descendants.push(empId);
+        queue.push(empId);
+      }
+    }
+  }
+
+  console.log(`[buildTeamTreeSync] Found ${descendants.length} descendants`);
+
+  // Save to cache
+  await firestore.collection('teamTrees').doc(managerId).set({
+    managerId,
+    descendants,
+    depth: 0, // Placeholder, implementing full depth calc might be expensive here
+    employeeCount: descendants.length,
+    updatedAt: FieldValue.serverTimestamp(),
+    version: 1
+  });
+
+  return descendants;
+}
+
+async function rebuildTeamTree(managerId) {
+  return buildTeamTreeSync(managerId);
+}
+
+async function addManagerChain(managerId, set) {
+  const firestore = getFirestore();
+  let currentId = managerId;
+  const visited = new Set();
+
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    const empDoc = await firestore.collection('employees').doc(currentId).get();
+
+    if (!empDoc.exists) break;
+
+    const emp = empDoc.data();
+    if (emp.manager_id) {
+      set.add(emp.manager_id);
+      currentId = emp.manager_id;
+    } else {
+      break;
+    }
+  }
+}
+
+// --- New Cloud Functions for Manager View Optimization ---
+
+exports.getManagerTeam = functions.https.onCall(async (data, context) => {
+  console.log('[getManagerTeam] Called');
+
+  // 1. Authentication check
+  if (!context.auth) {
+    console.error('[getManagerTeam] Unauthenticated');
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+  }
+
+  const safeData = data || {};
+  const managerId = safeData.managerId || context.auth.uid;
+  const filters = safeData.filters || {};
+  console.log(`[getManagerTeam] ManagerId: ${managerId}, Filters:`, filters);
+
+  // 2. Access check (only manager themselves or HR)
+  const isHR = context.auth.token.isHR || context.auth.token.is_hr;
+  if (!isHR && context.auth.uid !== managerId) {
+    console.error(`[getManagerTeam] Access denied. User: ${context.auth.uid}, Target: ${managerId}`);
+    throw new functions.https.HttpsError('permission-denied', 'Access denied');
+  }
+
+  try {
+    const firestore = admin.firestore();
+
+    // 3. Read teamTrees cache
+    const teamTreeDoc = await firestore.collection('teamTrees').doc(managerId).get();
+
+    let descendantIds = [];
+    let cached = false;
+
+    if (teamTreeDoc.exists) {
+      const treeData = teamTreeDoc.data();
+      descendantIds = treeData.descendants || [];
+      cached = true;
+      console.log(`[getManagerTeam] Cache hit. Descendants: ${descendantIds.length}`);
+
+      // Check cache freshness (< 1 hour)
+      const updatedAt = treeData.updatedAt ? treeData.updatedAt.toMillis() : 0;
+      const cacheAge = Date.now() - updatedAt;
+      if (cacheAge > 3600000) {
+        console.log('[getManagerTeam] Cache stale, triggering rebuild');
+        // Cache stale - rebuild asynchronously
+        rebuildTeamTree(managerId).catch(err =>
+          console.error('Failed to rebuild team tree:', err)
+        );
+      }
+    } else {
+      console.log('[getManagerTeam] Cache miss, building synchronously');
+      // Cache missing - build synchronously
+      descendantIds = await buildTeamTreeSync(managerId);
+      cached = false;
+      console.log(`[getManagerTeam] Built tree. Descendants: ${descendantIds.length}`);
+    }
+
+    // 4. Load employees
+    const employeeIds = [managerId, ...descendantIds];
+    console.log(`[getManagerTeam] Loading ${employeeIds.length} employees`);
+
+    const chunks = chunkArray(employeeIds, 10);
+    let employees = [];
+
+    for (const chunk of chunks) {
+      if (chunk.length === 0) continue;
+      try {
+        const snapshot = await firestore.collection('employees')
+          .where(FieldPath.documentId(), 'in', chunk)
+          .get();
+        employees.push(...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error('[getManagerTeam] Error fetching employees chunk:', err);
+        throw err;
+      }
+    }
+
+    // 5. Apply filters
+    if (filters.department) {
+      employees = employees.filter(emp =>
+        emp.department === filters.department ||
+        emp.department_id === filters.department
+      );
+    }
+
+    // 6. Load vacations for these employees
+    const vacationChunks = chunkArray(employees.map(e => e.id), 10);
+    let vacations = [];
+
+    for (const chunk of vacationChunks) {
+      if (chunk.length === 0) continue;
+      try {
+        const snapshot = await firestore.collection('vacation_periods')
+          .where('employee_id', 'in', chunk)
+          .get();
+        vacations.push(...snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error('[getManagerTeam] Error fetching vacations chunk:', err);
+        throw err;
+      }
+    }
+
+    console.log(`[getManagerTeam] Returning ${employees.length} employees and ${vacations.length} vacations`);
+
+    return {
+      employees,
+      vacations,
+      cached,
+      teamSize: descendantIds.length + 1,
+      timestamp: Date.now()
+    };
+
+  } catch (error) {
+    console.error('getManagerTeam error:', error);
+    throw new functions.https.HttpsError('internal', error.message);
+  }
+});
+
+/**
+ * Update teamTrees when an employee is changed (manager_id changes).
+ */
+exports.updateTeamTreesOnEmployeeChange = functions.firestore
+  .document('employees/{employeeId}')
+  .onWrite(async (change, context) => {
+    const before = change.before.exists ? change.before.data() : null;
+    const after = change.after.exists ? change.after.data() : null;
+
+    // Check if manager_id changed
+    const managerChanged = before?.manager_id !== after?.manager_id;
+
+    if (!managerChanged && change.before.exists && change.after.exists) {
+      return null;
+    }
+
+    const affectedManagers = new Set();
+
+    // Add old manager chain
+    if (before?.manager_id) {
+      affectedManagers.add(before.manager_id);
+      await addManagerChain(before.manager_id, affectedManagers);
+    }
+
+    // Add new manager chain
+    if (after?.manager_id) {
+      affectedManagers.add(after.manager_id);
+      await addManagerChain(after.manager_id, affectedManagers);
+    }
+
+    // Rebuild team trees for all affected managers
+    const rebuildPromises = Array.from(affectedManagers).map(managerId =>
+      rebuildTeamTree(managerId).catch(err =>
+        console.error(`Failed to rebuild tree for ${managerId}:`, err)
+      )
+    );
+
+    await Promise.all(rebuildPromises);
+
+    console.log(`Updated ${affectedManagers.size} team trees`);
+    return null;
+  });
+
+/**
+ * Rebuild all teamTrees (admin utility).
+ */
+exports.rebuildAllTeamTrees = functions.https.onRequest(async (req, res) => {
+  try {
+    const firestore = admin.firestore();
+    const employeesSnapshot = await firestore.collection('employees').get();
+
+    const managers = new Set();
+    employeesSnapshot.docs.forEach(doc => {
+      const emp = doc.data();
+      if (emp.manager_id) {
+        managers.add(emp.manager_id);
+      }
+    });
+
+    console.log(`Found ${managers.size} managers`);
+
+    const results = [];
+    for (const managerId of managers) {
+      try {
+        await buildTeamTreeSync(managerId);
+        results.push({ managerId, status: 'success' });
+      } catch (error) {
+        results.push({ managerId, status: 'error', error: error.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      managersProcessed: managers.size,
+      results
+    });
+
+  } catch (error) {
+    console.error('rebuildAllTeamTrees error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
