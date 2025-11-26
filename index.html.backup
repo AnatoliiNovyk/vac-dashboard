@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vacation Dashboard - Вхід</title>
+    <title>Vacation Dashboard - ╨Т╤Е╤Ц╨┤</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -19,9 +19,9 @@
                     Vacation Dashboard
                 </h1>
                 <button type="button" id="logout-btn" class="btn btn--secondary btn--sm header-logout-btn"
-                    aria-label="Вийти із профілю">
+                    aria-label="╨Т╨╕╨╣╤В╨╕ ╤Ц╨╖ ╨┐╤А╨╛╤Д╤Ц╨╗╤О">
                     <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
-                    <span class="header-logout-btn__label">Вийти</span>
+                    <span class="header-logout-btn__label">╨Т╨╕╨╣╤В╨╕</span>
                 </button>
             </div>
         </div>
@@ -33,33 +33,33 @@
         aria-labelledby="vacation-manager-title">
         <div class="modal-content vacation-manager">
             <div class="modal-header">
-                <h3 id="vacation-manager-title">Періоди відпусток</h3>
-                <button type="button" id="vacation-manager-close" class="modal-close" aria-label="Закрити">
+                <h3 id="vacation-manager-title">╨Я╨╡╤А╤Ц╨╛╨┤╨╕ ╨▓╤Ц╨┤╨┐╤Г╤Б╤В╨╛╨║</h3>
+                <button type="button" id="vacation-manager-close" class="modal-close" aria-label="╨Ч╨░╨║╤А╨╕╤В╨╕">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <form id="vacation-manager-form">
                 <div class="modal-body">
                     <div class="vacation-manager__employee">
-                        <label for="vacation-manager-employee-select" class="form-label">Співробітник</label>
+                        <label for="vacation-manager-employee-select" class="form-label">╨б╨┐╤Ц╨▓╤А╨╛╨▒╤Ц╤В╨╜╨╕╨║</label>
                         <select id="vacation-manager-employee-select" class="form-control hidden"></select>
-                        <div id="vacation-manager-employee-name" class="vacation-manager__employee-name">—</div>
+                        <div id="vacation-manager-employee-name" class="vacation-manager__employee-name">тАФ</div>
                     </div>
                     <div class="vacation-manager__section">
                         <div class="vacation-manager__section-header">
-                            <h4>Періоди</h4>
+                            <h4>╨Я╨╡╤А╤Ц╨╛╨┤╨╕</h4>
                             <button type="button" id="vacation-period-add" class="btn btn--secondary btn--small">
                                 <i class="fas fa-plus"></i>
-                                Додати період
+                                ╨Ф╨╛╨┤╨░╤В╨╕ ╨┐╨╡╤А╤Ц╨╛╨┤
                             </button>
                         </div>
                         <div id="vacation-periods-list" class="vacation-periods-list"></div>
-                        <div id="vacation-periods-empty" class="vacation-periods-empty">Періоди ще не додано.</div>
+                        <div id="vacation-periods-empty" class="vacation-periods-empty">╨Я╨╡╤А╤Ц╨╛╨┤╨╕ ╤Й╨╡ ╨╜╨╡ ╨┤╨╛╨┤╨░╨╜╨╛.</div>
                         <div class="vacation-periods-summary">
-                            <span id="vacation-periods-total" class="vacation-periods-total">Сумарно: 0 дн.</span>
+                            <span id="vacation-periods-total" class="vacation-periods-total">╨б╤Г╨╝╨░╤А╨╜╨╛: 0 ╨┤╨╜.</span>
                             <div class="vacation-limit-field">
-                                <label for="vacation-limit-input" class="form-label vacation-limit-label">Ліміт
-                                    (днів)</label>
+                                <label for="vacation-limit-input" class="form-label vacation-limit-label">╨Ы╤Ц╨╝╤Ц╤В
+                                    (╨┤╨╜╤Ц╨▓)</label>
                                 <input type="number" id="vacation-limit-input" class="form-control vacation-limit-input"
                                     min="0" step="1" inputmode="numeric" pattern="[0-9]*">
                                 <div id="vacation-limit-error" class="vacation-limit-error hidden"></div>
@@ -75,10 +75,10 @@
                         class="vacation-manager__message vacation-manager__message--success hidden"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="vacation-modal-cancel" class="btn btn--secondary">Скасувати</button>
+                    <button type="button" id="vacation-modal-cancel" class="btn btn--secondary">╨б╨║╨░╤Б╤Г╨▓╨░╤В╨╕</button>
                     <button type="submit" id="vacation-modal-save" class="btn btn--primary">
                         <i class="fas fa-save"></i>
-                        Зберегти
+                        ╨Ч╨▒╨╡╤А╨╡╨│╤В╨╕
                     </button>
                 </div>
             </form>
@@ -90,45 +90,45 @@
         aria-labelledby="employee-info-title">
         <div class="modal-content employee-info-modal">
             <div class="modal-header">
-                <h3 id="employee-info-title">Інформація про співробітника</h3>
-                <button type="button" id="employee-info-close" class="modal-close" aria-label="Закрити">
+                <h3 id="employee-info-title">╨Ж╨╜╤Д╨╛╤А╨╝╨░╤Ж╤Ц╤П ╨┐╤А╨╛ ╤Б╨┐╤Ц╨▓╤А╨╛╨▒╤Ц╤В╨╜╨╕╨║╨░</h3>
+                <button type="button" id="employee-info-close" class="modal-close" aria-label="╨Ч╨░╨║╤А╨╕╤В╨╕">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="employee-info-section">
-                    <h4 id="employee-info-name" class="employee-info-name">—</h4>
+                    <h4 id="employee-info-name" class="employee-info-name">тАФ</h4>
                     <div class="employee-info-grid">
                         <div class="employee-info-field">
-                            <span class="employee-info-label">ІПН</span>
-                            <span id="employee-info-tax-id" class="employee-info-value">—</span>
+                            <span class="employee-info-label">╨Ж╨Я╨Э</span>
+                            <span id="employee-info-tax-id" class="employee-info-value">тАФ</span>
                         </div>
                         <div class="employee-info-field">
-                            <span class="employee-info-label">Підрозділ</span>
-                            <span id="employee-info-department" class="employee-info-value">—</span>
+                            <span class="employee-info-label">╨Я╤Ц╨┤╤А╨╛╨╖╨┤╤Ц╨╗</span>
+                            <span id="employee-info-department" class="employee-info-value">тАФ</span>
                         </div>
                         <div class="employee-info-field">
-                            <span class="employee-info-label">Посада</span>
-                            <span id="employee-info-position" class="employee-info-value">—</span>
+                            <span class="employee-info-label">╨Я╨╛╤Б╨░╨┤╨░</span>
+                            <span id="employee-info-position" class="employee-info-value">тАФ</span>
                         </div>
                         <div class="employee-info-field">
-                            <span class="employee-info-label">Менеджер</span>
-                            <span id="employee-info-manager" class="employee-info-value">—</span>
+                            <span class="employee-info-label">╨Ь╨╡╨╜╨╡╨┤╨╢╨╡╤А</span>
+                            <span id="employee-info-manager" class="employee-info-value">тАФ</span>
                         </div>
                         <div class="employee-info-field">
-                            <span class="employee-info-label">Нараховано, дн.</span>
-                            <span id="employee-info-accrued" class="employee-info-value">—</span>
+                            <span class="employee-info-label">╨Э╨░╤А╨░╤Е╨╛╨▓╨░╨╜╨╛, ╨┤╨╜.</span>
+                            <span id="employee-info-accrued" class="employee-info-value">тАФ</span>
                         </div>
                         <div class="employee-info-field">
-                            <span class="employee-info-label">Залишок, дн.</span>
-                            <span id="employee-info-balance" class="employee-info-value">—</span>
+                            <span class="employee-info-label">╨Ч╨░╨╗╨╕╤И╨╛╨║, ╨┤╨╜.</span>
+                            <span id="employee-info-balance" class="employee-info-value">тАФ</span>
                         </div>
                     </div>
                 </div>
                 <div class="employee-info-history">
-                    <h4 class="employee-info-subtitle">Історія відпусток</h4>
+                    <h4 class="employee-info-subtitle">╨Ж╤Б╤В╨╛╤А╤Ц╤П ╨▓╤Ц╨┤╨┐╤Г╤Б╤В╨╛╨║</h4>
                     <ul id="employee-info-history-list" class="info-history-list"></ul>
-                    <div id="employee-info-history-empty" class="info-history-empty">Відпусток ще не додано.</div>
+                    <div id="employee-info-history-empty" class="info-history-empty">╨Т╤Ц╨┤╨┐╤Г╤Б╤В╨╛╨║ ╤Й╨╡ ╨╜╨╡ ╨┤╨╛╨┤╨░╨╜╨╛.</div>
                 </div>
             </div>
         </div>
@@ -137,8 +137,8 @@
     <div id="bas-export-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bas-export-title">
         <div class="modal-content bas-export-modal">
             <div class="modal-header">
-                <h3 id="bas-export-title">Експорт в BAS</h3>
-                <button type="button" id="bas-export-close" class="modal-close" aria-label="Закрити">
+                <h3 id="bas-export-title">╨Х╨║╤Б╨┐╨╛╤А╤В ╨▓ BAS</h3>
+                <button type="button" id="bas-export-close" class="modal-close" aria-label="╨Ч╨░╨║╤А╨╕╤В╨╕">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -147,34 +147,34 @@
                     <div id="bas-export-error" class="bas-export-error hidden" role="alert"></div>
                     <div class="bas-export-field-grid">
                         <div class="form-group">
-                            <label for="bas-export-start" class="form-label">Дата з</label>
+                            <label for="bas-export-start" class="form-label">╨Ф╨░╤В╨░ ╨╖</label>
                             <input type="date" id="bas-export-start" class="form-control" required>
                         </div>
                         <div class="form-group">
-                            <label for="bas-export-end" class="form-label">Дата по</label>
+                            <label for="bas-export-end" class="form-label">╨Ф╨░╤В╨░ ╨┐╨╛</label>
                             <input type="date" id="bas-export-end" class="form-control" required>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="bas-export-format" class="form-label">Формат файлу</label>
+                        <label for="bas-export-format" class="form-label">╨д╨╛╤А╨╝╨░╤В ╤Д╨░╨╣╨╗╤Г</label>
                         <select id="bas-export-format" class="form-control"></select>
                     </div>
                     <div class="form-group">
-                        <label for="bas-export-department" class="form-label">Підрозділ</label>
+                        <label for="bas-export-department" class="form-label">╨Я╤Ц╨┤╤А╨╛╨╖╨┤╤Ц╨╗</label>
                         <select id="bas-export-department" class="form-control">
-                            <option value="">Всі підрозділи</option>
+                            <option value="">╨Т╤Б╤Ц ╨┐╤Ц╨┤╤А╨╛╨╖╨┤╤Ц╨╗╨╕</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <span class="form-label">Статуси відпусток</span>
+                        <span class="form-label">╨б╤В╨░╤В╤Г╤Б╨╕ ╨▓╤Ц╨┤╨┐╤Г╤Б╤В╨╛╨║</span>
                         <div id="bas-export-statuses" class="bas-export-statuses"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" id="bas-export-cancel" class="btn btn--secondary">Скасувати</button>
+                    <button type="button" id="bas-export-cancel" class="btn btn--secondary">╨б╨║╨░╤Б╤Г╨▓╨░╤В╨╕</button>
                     <button type="submit" id="bas-export-submit" class="btn btn--primary">
                         <i class="fas fa-download" aria-hidden="true"></i>
-                        <span class="bas-export-submit-label">Завантажити</span>
+                        <span class="bas-export-submit-label">╨Ч╨░╨▓╨░╨╜╤В╨░╨╢╨╕╤В╨╕</span>
                     </button>
                 </div>
             </form>
@@ -187,17 +187,17 @@
             <div id="login-screen" class="welcome-screen">
                 <div class="welcome-card">
                     <i class="fas fa-id-card welcome-icon"></i>
-                    <h2>Вхід до системи</h2>
-                    <p>Будь ласка, введіть ваш ідентифікаційний номер (ІПН), щоб увійти.</p>
+                    <h2>╨Т╤Е╤Ц╨┤ ╨┤╨╛ ╤Б╨╕╤Б╤В╨╡╨╝╨╕</h2>
+                    <p>╨С╤Г╨┤╤М ╨╗╨░╤Б╨║╨░, ╨▓╨▓╨╡╨┤╤Ц╤В╤М ╨▓╨░╤И ╤Ц╨┤╨╡╨╜╤В╨╕╤Д╤Ц╨║╨░╤Ж╤Ц╨╣╨╜╨╕╨╣ ╨╜╨╛╨╝╨╡╤А (╨Ж╨Я╨Э), ╤Й╨╛╨▒ ╤Г╨▓╤Ц╨╣╤В╨╕.</p>
                     <form id="login-form" class="login-form">
                         <div class="form-group">
-                            <label for="tax-id-input" class="form-label sr-only">Ідентифікаційний номер (ІПН)</label>
-                            <input type="text" id="tax-id-input" class="form-control" placeholder="Ваш ІПН" required
+                            <label for="tax-id-input" class="form-label sr-only">╨Ж╨┤╨╡╨╜╤В╨╕╤Д╤Ц╨║╨░╤Ж╤Ц╨╣╨╜╨╕╨╣ ╨╜╨╛╨╝╨╡╤А (╨Ж╨Я╨Э)</label>
+                            <input type="text" id="tax-id-input" class="form-control" placeholder="╨Т╨░╤И ╨Ж╨Я╨Э" required
                                 autocomplete="off">
                         </div>
                         <button type="submit" id="login-btn" class="btn btn--primary btn--full-width">
                             <i class="fas fa-sign-in-alt"></i>
-                            Увійти
+                            ╨г╨▓╤Ц╨╣╤В╨╕
                         </button>
                         <div id="login-error" class="form-error hidden"></div>
                     </form>
@@ -210,8 +210,8 @@
                 <div class="user-info-bar">
                     <div class="user-info">
                         <i class="fas fa-user-circle"></i>
-                        <span id="current-user-name">Користувач</span>
-                        <span id="current-user-role" class="user-role-badge">Роль</span>
+                        <span id="current-user-name">╨Ъ╨╛╤А╨╕╤Б╤В╤Г╨▓╨░╤З</span>
+                        <span id="current-user-role" class="user-role-badge">╨а╨╛╨╗╤М</span>
                     </div>
                     <div class="user-stats stats-grid" id="stats-grid">
                         <!-- Cards for stats will be rendered here -->
@@ -230,7 +230,7 @@
                     <!-- Calendar Section -->
                     <section class="calendar-section" id="calendar-section">
                         <div class="calendar-header">
-                            <h3>Календар відпусток</h3>
+                            <h3>╨Ъ╨░╨╗╨╡╨╜╨┤╨░╤А ╨▓╤Ц╨┤╨┐╤Г╤Б╤В╨╛╨║</h3>
                             <div class="calendar-controls" id="calendar-controls"></div>
                         </div>
                         <div class="calendar-body">
@@ -241,26 +241,26 @@
                     <!-- Table Section -->
                     <section class="table-section" id="table-section">
                         <div class="table-header">
-                            <h3 id="table-title">Таблиця співробітників</h3>
+                            <h3 id="table-title">╨в╨░╨▒╨╗╨╕╤Ж╤П ╤Б╨┐╤Ц╨▓╤А╨╛╨▒╤Ц╤В╨╜╨╕╨║╤Ц╨▓</h3>
                             <div id="my-view-controls" class="table-header-controls hidden" aria-hidden="true">
                                 <div class="my-view-filter-group">
-                                    <label for="my-view-year-filter" class="filter-label">Рік</label>
+                                    <label for="my-view-year-filter" class="filter-label">╨а╤Ц╨║</label>
                                     <select id="my-view-year-filter" class="filter-select">
-                                        <option value="">Всі роки</option>
+                                        <option value="">╨Т╤Б╤Ц ╤А╨╛╨║╨╕</option>
                                     </select>
                                 </div>
                                 <div class="my-view-filter-group">
-                                    <label for="my-view-status-filter" class="filter-label">Статус</label>
+                                    <label for="my-view-status-filter" class="filter-label">╨б╤В╨░╤В╤Г╤Б</label>
                                     <select id="my-view-status-filter" class="filter-select">
-                                        <option value="">Всі статуси</option>
-                                        <option value="Заплановано">Заплановано</option>
-                                        <option value="Минулі відпустки">Минулі відпустки</option>
+                                        <option value="">╨Т╤Б╤Ц ╤Б╤В╨░╤В╤Г╤Б╨╕</option>
+                                        <option value="╨Ч╨░╨┐╨╗╨░╨╜╨╛╨▓╨░╨╜╨╛">╨Ч╨░╨┐╨╗╨░╨╜╨╛╨▓╨░╨╜╨╛</option>
+                                        <option value="╨Ь╨╕╨╜╤Г╨╗╤Ц ╨▓╤Ц╨┤╨┐╤Г╤Б╤В╨║╨╕">╨Ь╨╕╨╜╤Г╨╗╤Ц ╨▓╤Ц╨┤╨┐╤Г╤Б╤В╨║╨╕</option>
                                     </select>
                                 </div>
                                 <button id="my-view-reset-filters" class="btn btn--secondary btn--sm filter-reset-btn"
                                     type="button">
                                     <i class="fas fa-rotate-left"></i>
-                                    <span>Скинути фільтри</span>
+                                    <span>╨б╨║╨╕╨╜╤Г╤В╨╕ ╤Д╤Ц╨╗╤М╤В╤А╨╕</span>
                                 </button>
                             </div>
                         </div>
@@ -268,14 +268,14 @@
                             <table class="vacations-table" id="vacations-table">
                                 <thead id="table-head">
                                     <tr class="table-head-template">
-                                        <th>Ім'я</th>
-                                        <th>Підрозділ</th>
-                                        <th>Посада</th>
-                                        <th>Статус</th>
-                                        <th>Ближча відпустка</th>
-                                        <th class="col-earned">Нарах.</th>
-                                        <th>Залишок днів</th>
-                                        <th>Дії</th>
+                                        <th>╨Ж╨╝'╤П</th>
+                                        <th>╨Я╤Ц╨┤╤А╨╛╨╖╨┤╤Ц╨╗</th>
+                                        <th>╨Я╨╛╤Б╨░╨┤╨░</th>
+                                        <th>╨б╤В╨░╤В╤Г╤Б</th>
+                                        <th>╨С╨╗╨╕╨╢╤З╨░ ╨▓╤Ц╨┤╨┐╤Г╤Б╤В╨║╨░</th>
+                                        <th class="col-earned">╨Э╨░╤А╨░╤Е.</th>
+                                        <th>╨Ч╨░╨╗╨╕╤И╨╛╨║ ╨┤╨╜╤Ц╨▓</th>
+                                        <th>╨Ф╤Ц╤Ч</th>
                                     </tr>
                                 </thead>
                                 <tbody id="table-body"></tbody>
@@ -283,18 +283,18 @@
                         </div>
                         <div id="bas-actions" class="bas-actions hidden" aria-hidden="true">
                             <div class="bas-actions__header">
-                                <p class="bas-actions__hint">Синхронізація з BAS Payroll/HR</p>
+                                <p class="bas-actions__hint">╨б╨╕╨╜╤Е╤А╨╛╨╜╤Ц╨╖╨░╤Ж╤Ц╤П ╨╖ BAS Payroll/HR</p>
                             </div>
                             <div class="bas-actions__buttons">
                                 <button type="button" id="bas-import-button"
                                     class="btn btn--secondary bas-actions__button bas-actions__button--import">
                                     <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
-                                    <span>Імпорт з BAS</span>
+                                    <span>╨Ж╨╝╨┐╨╛╤А╤В ╨╖ BAS</span>
                                 </button>
                                 <button type="button" id="bas-export-button"
                                     class="btn btn--primary bas-actions__button bas-actions__button--export">
                                     <i class="fas fa-cloud-download-alt" aria-hidden="true"></i>
-                                    <span>Експорт в BAS</span>
+                                    <span>╨Х╨║╤Б╨┐╨╛╤А╤В ╨▓ BAS</span>
                                 </button>
                             </div>
                             <input type="file" id="bas-import-file" class="bas-actions__file-input"
@@ -305,8 +305,8 @@
                                         role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
                                     </div>
                                 </div>
-                                <span id="bas-import-progress-label" class="bas-actions__progress-label">Готово до
-                                    імпорту</span>
+                                <span id="bas-import-progress-label" class="bas-actions__progress-label">╨У╨╛╤В╨╛╨▓╨╛ ╨┤╨╛
+                                    ╤Ц╨╝╨┐╨╛╤А╤В╤Г</span>
                             </div>
                             <div id="bas-sync-log" class="bas-actions__log hidden" aria-live="polite"></div>
                         </div>
@@ -329,18 +329,12 @@
     <script src="bas-integration.js"></script>
 
     <!-- Legacy app.js (will be removed after migration) -->
-    <!-- <script src="app.js"></script> -->
+    <script src="app.js"></script>
 
     <!-- New modular architecture (ES6 modules) -->
-    <script>
-        console.log("Inline script running");
-        document.title = "INLINE SCRIPT RUNNING";
-        window.onerror = function (msg, url, line) {
-            console.error("Global error: " + msg + " at " + url + ":" + line);
-            document.title = "JS ERROR";
-        };
-    </script>
-    <script type="module" src="js/main.js?v=debug2"></script>
+    <!-- Uncomment when ready to switch:
+    <script type="module" src="js/main.js"></script>
+    -->
 </body>
 
 </html>

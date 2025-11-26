@@ -126,7 +126,7 @@ function getVisibleTabs(userDoc) {
  * Update user summary display
  * @param {Object} userDoc - User document
  */
-function updateUserSummary(userDoc) {
+export function updateUserSummary(userDoc) {
     if (elements.currentUserName) {
         elements.currentUserName.textContent = userDoc?.fullName || userDoc?.name || "—";
     }
@@ -287,8 +287,4 @@ function renderEmployeeTable(employees) {
     console.log('[ui] Rendering table with', employees.length, 'employees');
 }
 
-export {
-    renderMainContent,
-    rerenderUI,
-    updateUserSummary
-};
+

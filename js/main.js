@@ -3,6 +3,8 @@
  */
 
 // Import core modules
+document.title = "JS LOADED " + new Date().toISOString();
+console.log("JS LOADED");
 import { connectEmulatorsIfNeeded } from './core/config.js';
 import { appState, appData } from './core/state.js';
 
