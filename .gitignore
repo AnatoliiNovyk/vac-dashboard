@@ -10,3 +10,8 @@ node_modules/
 # IDE-specific files
 .idx/
 firebase-debug.log
+firestore-debug.log
+
+.log
+functions/firestore-debug.log
+
