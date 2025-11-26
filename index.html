@@ -327,13 +327,208 @@
     <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
     <script src="bas-integration.js"></script>
+    </div>
+    <!-- BAS Export Modal -->
+    <div id="bas-export-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bas-export-title">
+        <div class="modal-content bas-export-modal">
+            <div class="modal-header">
+                <h3 id="bas-export-title">Експорт в BAS</h3>
+                <button type="button" id="bas-export-close" class="modal-close" aria-label="Закрити">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="bas-export-form">
+                <div class="modal-body">
+                    <div id="bas-export-error" class="bas-export-error hidden" role="alert"></div>
+                    <div class="bas-export-field-grid">
+                        <div class="form-group">
+                            <label for="bas-export-start" class="form-label">Дата з</label>
+                            <input type="date" id="bas-export-start" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="bas-export-end" class="form-label">Дата по</label>
+                            <input type="date" id="bas-export-end" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="bas-export-format" class="form-label">Формат файлу</label>
+                        <select id="bas-export-format" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bas-export-department" class="form-label">Підрозділ</label>
+                        <select id="bas-export-department" class="form-control">
+                            <option value="">Всі підрозділи</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <span class="form-label">Статуси відпусток</span>
+                        <div id="bas-export-statuses" class="bas-export-statuses"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="bas-export-cancel" class="btn btn--secondary">Скасувати</button>
+                    <button type="submit" id="bas-export-submit" class="btn btn--primary">
+                        <i class="fas fa-download" aria-hidden="true"></i>
+                        <span class="bas-export-submit-label">Завантажити</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Login Screen -->
+            <div id="login-screen" class="welcome-screen">
+                <div class="welcome-card">
+                    <i class="fas fa-id-card welcome-icon"></i>
+                    <h2>Вхід до системи</h2>
+                    <p>Будь ласка, введіть ваш ідентифікаційний номер (ІПН), щоб увійти.</p>
+                    <form id="login-form" class="login-form">
+                        <div class="form-group">
+                            <label for="tax-id-input" class="form-label sr-only">Ідентифікаційний номер (ІПН)</label>
+                            <input type="text" id="tax-id-input" class="form-control" placeholder="Ваш ІПН" required
+                                autocomplete="off">
+                        </div>
+                        <button type="submit" id="login-btn" class="btn btn--primary btn--full-width">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Увійти
+                        </button>
+                        <div id="login-error" class="form-error hidden"></div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Dashboard Container (initially hidden) -->
+            <div id="dashboard-container" class="dashboard-container hidden">
+                <!-- User Info Bar -->
+                <div class="user-info-bar">
+                    <div class="user-info">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="current-user-name">Користувач</span>
+                        <span id="current-user-role" class="user-role-badge">Роль</span>
+                    </div>
+                    <div class="user-stats stats-grid" id="stats-grid">
+                        <!-- Cards for stats will be rendered here -->
+                    </div>
+                </div>
+                <!-- Tabs Navigation -->
+                <nav id="tabs-nav" class="tabs-nav"></nav>
+                <!-- Filters Section -->
+                <section class="filters-section" id="filters-section">
+                    <div class="filters-grid" id="filters-grid">
+                        <!-- Filter controls will be rendered here -->
+                    </div>
+                </section>
+                <!-- Content Area: Calendar + Table -->
+                <div class="content-area">
+                    <!-- Calendar Section -->
+                    <section class="calendar-section" id="calendar-section">
+                        <div class="calendar-header">
+                            <h3>Календар відпусток</h3>
+                            <div class="calendar-controls" id="calendar-controls"></div>
+                        </div>
+                        <div class="calendar-body">
+                            <div id="vacation-calendar"></div>
+                        </div>
+                        <div class="calendar-legend" id="calendar-legend"></div>
+                    </section>
+                    <!-- Table Section -->
+                    <section class="table-section" id="table-section">
+                        <div class="table-header">
+                            <h3 id="table-title">Таблиця співробітників</h3>
+                            <div id="my-view-controls" class="table-header-controls hidden" aria-hidden="true">
+                                <div class="my-view-filter-group">
+                                    <label for="my-view-year-filter" class="filter-label">Рік</label>
+                                    <select id="my-view-year-filter" class="filter-select">
+                                        <option value="">Всі роки</option>
+                                    </select>
+                                </div>
+                                <div class="my-view-filter-group">
+                                    <label for="my-view-status-filter" class="filter-label">Статус</label>
+                                    <select id="my-view-status-filter" class="filter-select">
+                                        <option value="">Всі статуси</option>
+                                        <option value="Заплановано">Заплановано</option>
+                                        <option value="Минулі відпустки">Минулі відпустки</option>
+                                    </select>
+                                </div>
+                                <button id="my-view-reset-filters" class="btn btn--secondary btn--sm filter-reset-btn"
+                                    type="button">
+                                    <i class="fas fa-rotate-left"></i>
+                                    <span>Скинути фільтри</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table class="vacations-table" id="vacations-table">
+                                <thead id="table-head">
+                                    <tr class="table-head-template">
+                                        <th>Ім'я</th>
+                                        <th>Підрозділ</th>
+                                        <th>Посада</th>
+                                        <th>Статус</th>
+                                        <th>Ближча відпустка</th>
+                                        <th class="col-earned">Нарах.</th>
+                                        <th>Залишок днів</th>
+                                        <th>Дії</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-body"></tbody>
+                            </table>
+                        </div>
+                        <div id="bas-actions" class="bas-actions hidden" aria-hidden="true">
+                            <div class="bas-actions__header">
+                                <p class="bas-actions__hint">Синхронізація з BAS Payroll/HR</p>
+                            </div>
+                            <div class="bas-actions__buttons">
+                                <button type="button" id="bas-import-button"
+                                    class="btn btn--secondary bas-actions__button bas-actions__button--import">
+                                    <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
+                                    <span>Імпорт з BAS</span>
+                                </button>
+                                <button type="button" id="bas-export-button"
+                                    class="btn btn--primary bas-actions__button bas-actions__button--export">
+                                    <i class="fas fa-cloud-download-alt" aria-hidden="true"></i>
+                                    <span>Експорт в BAS</span>
+                                </button>
+                            </div>
+                            <input type="file" id="bas-import-file" class="bas-actions__file-input"
+                                accept=".csv,.json,.xml" hidden>
+                            <div id="bas-import-progress" class="bas-actions__progress hidden" aria-hidden="true">
+                                <div class="bas-actions__progress-track">
+                                    <div id="bas-import-progress-bar" class="bas-actions__progress-fill"
+                                        role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                    </div>
+                                </div>
+                                <span id="bas-import-progress-label" class="bas-actions__progress-label">Готово до
+                                    імпорту</span>
+                            </div>
+                            <div id="bas-sync-log" class="bas-actions__log hidden" aria-live="polite"></div>
+                        </div>
+                    </section>
+                </div>
+                <!-- Tab Content (legacy, for compatibility) -->
+                <div id="tab-content" class="tab-content"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-functions-compat.js"></script>
+
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
+    <script src="bas-integration.js"></script>
 
     <!-- Legacy app.js (will be removed after migration) -->
-    <script src="app.js"></script>
-
-    <!-- New modular architecture (ES6 modules) -->
-    <!-- Uncomment when ready to switch:
+    <!-- <script src="app.js"></script> -->
     <script type="module" src="js/main.js"></script>
+    <!-- New modular architecture (ES6 modules) -->
+    <!-- New Modular Architecture (Entry Point) -->
+    <script type="module" src="js/main.js?v=debug1"></script>
     -->
 </body>
 

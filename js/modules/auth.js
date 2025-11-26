@@ -124,7 +124,10 @@ async function handleAuthChange(user) {
 
         // Trigger user data loading (will be done by data module)
         if (window.onUserAuthenticated) {
+            console.log('[auth] Calling window.onUserAuthenticated');
             await window.onUserAuthenticated(user);
+        } else {
+            console.warn('[auth] window.onUserAuthenticated is NOT defined!');
         }
     } catch (error) {
         console.error("Не вдалося завантажити дані користувача:", error);
@@ -212,14 +215,26 @@ function resetLoginButton() {
  * Show dashboard screen
  */
 function showDashboard() {
+    console.log('[auth] showDashboard called');
+    console.log('[auth] elements.loginScreen:', elements.loginScreen);
+    console.log('[auth] elements.dashboard:', elements.dashboard);
+
     toggleHidden(elements.loginScreen, true);
     if (elements.loginScreen) {
         elements.loginScreen.style.display = "none";
+        console.log('[auth] Hiding login screen. New display:', elements.loginScreen.style.display);
+    } else {
+        console.warn('[auth] loginScreen element is missing!');
     }
+
     toggleHidden(elements.dashboard, false);
     if (elements.dashboard) {
         elements.dashboard.style.display = "";
+        console.log('[auth] Showing dashboard. New display:', elements.dashboard.style.display);
+    } else {
+        console.warn('[auth] dashboard element is missing!');
     }
+
     setLogoutVisibility(true);
 }
 

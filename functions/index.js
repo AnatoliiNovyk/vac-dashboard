@@ -436,6 +436,61 @@ async function addManagerChain(managerId, set) {
 
 // --- New Cloud Functions for Manager View Optimization ---
 
+/**
+ * Sign in with Tax ID (IPN)
+ * Returns a custom auth token
+ */
+exports.signInWithTaxId = functions.https.onCall(async (data, context) => {
+  const taxId = data.tax_id;
+  if (!taxId || !/^\d{10}$/.test(taxId)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Некоректний ІПН. Має бути 10 цифр.'
+    );
+  }
+
+  try {
+    const firestore = admin.firestore();
+    const snapshot = await firestore.collection('employees')
+      .where('tax_id', '==', taxId)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      throw new functions.https.HttpsError(
+        'not-found',
+        'Користувача з таким ІПН не знайдено.'
+      );
+    }
+
+    const userDoc = snapshot.docs[0];
+    const userData = userDoc.data();
+    const uid = userDoc.id;
+
+    // Create custom claims
+    const claims = {
+      isHR: !!userData.isHR,
+      isHRHead: !!userData.isHRHead,
+      isManager: !!userData.isManager,
+      departmentId: userData.department_id
+    };
+
+    // Create custom token
+    const token = await admin.auth().createCustomToken(uid, claims);
+
+    return { token };
+  } catch (error) {
+    console.error('signInWithTaxId error:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
+    throw new functions.https.HttpsError(
+      'internal',
+      'Помилка сервера при вході.'
+    );
+  }
+});
+
 exports.getManagerTeam = functions.https.onCall(async (data, context) => {
   console.log('[getManagerTeam] Called');
 
