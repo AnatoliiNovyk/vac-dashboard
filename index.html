@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="uk">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
+
 <body>
     <!-- Header -->
     <header class="header">
@@ -16,7 +18,8 @@
                     <i class="fas fa-calendar-alt"></i>
                     Vacation Dashboard
                 </h1>
-                <button type="button" id="logout-btn" class="btn btn--secondary btn--sm header-logout-btn" aria-label="Вийти із профілю">
+                <button type="button" id="logout-btn" class="btn btn--secondary btn--sm header-logout-btn"
+                    aria-label="Вийти із профілю">
                     <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
                     <span class="header-logout-btn__label">Вийти</span>
                 </button>
@@ -25,151 +28,158 @@
     </header>
 
 
-        <!-- Vacation Manager Modal -->
-        <div id="vacation-manager-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="vacation-manager-title">
-            <div class="modal-content vacation-manager">
-                <div class="modal-header">
-                    <h3 id="vacation-manager-title">Періоди відпусток</h3>
-                    <button type="button" id="vacation-manager-close" class="modal-close" aria-label="Закрити">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <form id="vacation-manager-form">
-                    <div class="modal-body">
-                        <div class="vacation-manager__employee">
-                            <label for="vacation-manager-employee-select" class="form-label">Співробітник</label>
-                            <select id="vacation-manager-employee-select" class="form-control hidden"></select>
-                            <div id="vacation-manager-employee-name" class="vacation-manager__employee-name">—</div>
-                        </div>
-                        <div class="vacation-manager__section">
-                            <div class="vacation-manager__section-header">
-                                <h4>Періоди</h4>
-                                <button type="button" id="vacation-period-add" class="btn btn--secondary btn--small">
-                                    <i class="fas fa-plus"></i>
-                                    Додати період
-                                </button>
-                            </div>
-                            <div id="vacation-periods-list" class="vacation-periods-list"></div>
-                            <div id="vacation-periods-empty" class="vacation-periods-empty">Періоди ще не додано.</div>
-                            <div class="vacation-periods-summary">
-                                <span id="vacation-periods-total" class="vacation-periods-total">Сумарно: 0 дн.</span>
-                                <div class="vacation-limit-field">
-                                    <label for="vacation-limit-input" class="form-label vacation-limit-label">Ліміт (днів)</label>
-                                    <input type="number" id="vacation-limit-input" class="form-control vacation-limit-input" min="0" step="1" inputmode="numeric" pattern="[0-9]*">
-                                    <div id="vacation-limit-error" class="vacation-limit-error hidden"></div>
-                                    <div id="vacation-periods-limit" class="vacation-limit-helper"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="vacation-modal-error" class="vacation-manager__message vacation-manager__message--error hidden"></div>
-                        <div id="vacation-modal-warning" class="vacation-manager__message vacation-manager__message--warning hidden"></div>
-                        <div id="vacation-modal-success" class="vacation-manager__message vacation-manager__message--success hidden"></div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" id="vacation-modal-cancel" class="btn btn--secondary">Скасувати</button>
-                        <button type="submit" id="vacation-modal-save" class="btn btn--primary">
-                            <i class="fas fa-save"></i>
-                            Зберегти
-                        </button>
-                    </div>
-                </form>
+    <!-- Vacation Manager Modal -->
+    <div id="vacation-manager-modal" class="modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="vacation-manager-title">
+        <div class="modal-content vacation-manager">
+            <div class="modal-header">
+                <h3 id="vacation-manager-title">Періоди відпусток</h3>
+                <button type="button" id="vacation-manager-close" class="modal-close" aria-label="Закрити">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-        </div>
-
-        <!-- Employee Info Modal -->
-        <div id="employee-info-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="employee-info-title">
-            <div class="modal-content employee-info-modal">
-                <div class="modal-header">
-                    <h3 id="employee-info-title">Інформація про співробітника</h3>
-                    <button type="button" id="employee-info-close" class="modal-close" aria-label="Закрити">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+            <form id="vacation-manager-form">
                 <div class="modal-body">
-                    <div class="employee-info-section">
-                        <h4 id="employee-info-name" class="employee-info-name">—</h4>
-                        <div class="employee-info-grid">
-                            <div class="employee-info-field">
-                                <span class="employee-info-label">ІПН</span>
-                                <span id="employee-info-tax-id" class="employee-info-value">—</span>
-                            </div>
-                            <div class="employee-info-field">
-                                <span class="employee-info-label">Підрозділ</span>
-                                <span id="employee-info-department" class="employee-info-value">—</span>
-                            </div>
-                            <div class="employee-info-field">
-                                <span class="employee-info-label">Посада</span>
-                                <span id="employee-info-position" class="employee-info-value">—</span>
-                            </div>
-                            <div class="employee-info-field">
-                                <span class="employee-info-label">Менеджер</span>
-                                <span id="employee-info-manager" class="employee-info-value">—</span>
-                            </div>
-                            <div class="employee-info-field">
-                                <span class="employee-info-label">Нараховано, дн.</span>
-                                <span id="employee-info-accrued" class="employee-info-value">—</span>
-                            </div>
-                            <div class="employee-info-field">
-                                <span class="employee-info-label">Залишок, дн.</span>
-                                <span id="employee-info-balance" class="employee-info-value">—</span>
+                    <div class="vacation-manager__employee">
+                        <label for="vacation-manager-employee-select" class="form-label">Співробітник</label>
+                        <select id="vacation-manager-employee-select" class="form-control hidden"></select>
+                        <div id="vacation-manager-employee-name" class="vacation-manager__employee-name">—</div>
+                    </div>
+                    <div class="vacation-manager__section">
+                        <div class="vacation-manager__section-header">
+                            <h4>Періоди</h4>
+                            <button type="button" id="vacation-period-add" class="btn btn--secondary btn--small">
+                                <i class="fas fa-plus"></i>
+                                Додати період
+                            </button>
+                        </div>
+                        <div id="vacation-periods-list" class="vacation-periods-list"></div>
+                        <div id="vacation-periods-empty" class="vacation-periods-empty">Періоди ще не додано.</div>
+                        <div class="vacation-periods-summary">
+                            <span id="vacation-periods-total" class="vacation-periods-total">Сумарно: 0 дн.</span>
+                            <div class="vacation-limit-field">
+                                <label for="vacation-limit-input" class="form-label vacation-limit-label">Ліміт
+                                    (днів)</label>
+                                <input type="number" id="vacation-limit-input" class="form-control vacation-limit-input"
+                                    min="0" step="1" inputmode="numeric" pattern="[0-9]*">
+                                <div id="vacation-limit-error" class="vacation-limit-error hidden"></div>
+                                <div id="vacation-periods-limit" class="vacation-limit-helper"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="employee-info-history">
-                        <h4 class="employee-info-subtitle">Історія відпусток</h4>
-                        <ul id="employee-info-history-list" class="info-history-list"></ul>
-                        <div id="employee-info-history-empty" class="info-history-empty">Відпусток ще не додано.</div>
-                    </div>
+                    <div id="vacation-modal-error"
+                        class="vacation-manager__message vacation-manager__message--error hidden"></div>
+                    <div id="vacation-modal-warning"
+                        class="vacation-manager__message vacation-manager__message--warning hidden"></div>
+                    <div id="vacation-modal-success"
+                        class="vacation-manager__message vacation-manager__message--success hidden"></div>
                 </div>
-            </div>
-        </div>
-        <!-- BAS Export Modal -->
-        <div id="bas-export-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bas-export-title">
-            <div class="modal-content bas-export-modal">
-                <div class="modal-header">
-                    <h3 id="bas-export-title">Експорт в BAS</h3>
-                    <button type="button" id="bas-export-close" class="modal-close" aria-label="Закрити">
-                        <i class="fas fa-times"></i>
+                <div class="modal-footer">
+                    <button type="button" id="vacation-modal-cancel" class="btn btn--secondary">Скасувати</button>
+                    <button type="submit" id="vacation-modal-save" class="btn btn--primary">
+                        <i class="fas fa-save"></i>
+                        Зберегти
                     </button>
                 </div>
-                <form id="bas-export-form">
-                    <div class="modal-body">
-                        <div id="bas-export-error" class="bas-export-error hidden" role="alert"></div>
-                        <div class="bas-export-field-grid">
-                            <div class="form-group">
-                                <label for="bas-export-start" class="form-label">Дата з</label>
-                                <input type="date" id="bas-export-start" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="bas-export-end" class="form-label">Дата по</label>
-                                <input type="date" id="bas-export-end" class="form-control" required>
-                            </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Employee Info Modal -->
+    <div id="employee-info-modal" class="modal hidden" role="dialog" aria-modal="true"
+        aria-labelledby="employee-info-title">
+        <div class="modal-content employee-info-modal">
+            <div class="modal-header">
+                <h3 id="employee-info-title">Інформація про співробітника</h3>
+                <button type="button" id="employee-info-close" class="modal-close" aria-label="Закрити">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="employee-info-section">
+                    <h4 id="employee-info-name" class="employee-info-name">—</h4>
+                    <div class="employee-info-grid">
+                        <div class="employee-info-field">
+                            <span class="employee-info-label">ІПН</span>
+                            <span id="employee-info-tax-id" class="employee-info-value">—</span>
                         </div>
-                        <div class="form-group">
-                            <label for="bas-export-format" class="form-label">Формат файлу</label>
-                            <select id="bas-export-format" class="form-control"></select>
+                        <div class="employee-info-field">
+                            <span class="employee-info-label">Підрозділ</span>
+                            <span id="employee-info-department" class="employee-info-value">—</span>
                         </div>
-                        <div class="form-group">
-                            <label for="bas-export-department" class="form-label">Підрозділ</label>
-                            <select id="bas-export-department" class="form-control">
-                                <option value="">Всі підрозділи</option>
-                            </select>
+                        <div class="employee-info-field">
+                            <span class="employee-info-label">Посада</span>
+                            <span id="employee-info-position" class="employee-info-value">—</span>
                         </div>
-                        <div class="form-group">
-                            <span class="form-label">Статуси відпусток</span>
-                            <div id="bas-export-statuses" class="bas-export-statuses"></div>
+                        <div class="employee-info-field">
+                            <span class="employee-info-label">Менеджер</span>
+                            <span id="employee-info-manager" class="employee-info-value">—</span>
+                        </div>
+                        <div class="employee-info-field">
+                            <span class="employee-info-label">Нараховано, дн.</span>
+                            <span id="employee-info-accrued" class="employee-info-value">—</span>
+                        </div>
+                        <div class="employee-info-field">
+                            <span class="employee-info-label">Залишок, дн.</span>
+                            <span id="employee-info-balance" class="employee-info-value">—</span>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" id="bas-export-cancel" class="btn btn--secondary">Скасувати</button>
-                        <button type="submit" id="bas-export-submit" class="btn btn--primary">
-                            <i class="fas fa-download" aria-hidden="true"></i>
-                            <span class="bas-export-submit-label">Завантажити</span>
-                        </button>
-                    </div>
-                </form>
+                </div>
+                <div class="employee-info-history">
+                    <h4 class="employee-info-subtitle">Історія відпусток</h4>
+                    <ul id="employee-info-history-list" class="info-history-list"></ul>
+                    <div id="employee-info-history-empty" class="info-history-empty">Відпусток ще не додано.</div>
+                </div>
             </div>
         </div>
+    </div>
+    <!-- BAS Export Modal -->
+    <div id="bas-export-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="bas-export-title">
+        <div class="modal-content bas-export-modal">
+            <div class="modal-header">
+                <h3 id="bas-export-title">Експорт в BAS</h3>
+                <button type="button" id="bas-export-close" class="modal-close" aria-label="Закрити">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="bas-export-form">
+                <div class="modal-body">
+                    <div id="bas-export-error" class="bas-export-error hidden" role="alert"></div>
+                    <div class="bas-export-field-grid">
+                        <div class="form-group">
+                            <label for="bas-export-start" class="form-label">Дата з</label>
+                            <input type="date" id="bas-export-start" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="bas-export-end" class="form-label">Дата по</label>
+                            <input type="date" id="bas-export-end" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="bas-export-format" class="form-label">Формат файлу</label>
+                        <select id="bas-export-format" class="form-control"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bas-export-department" class="form-label">Підрозділ</label>
+                        <select id="bas-export-department" class="form-control">
+                            <option value="">Всі підрозділи</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <span class="form-label">Статуси відпусток</span>
+                        <div id="bas-export-statuses" class="bas-export-statuses"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="bas-export-cancel" class="btn btn--secondary">Скасувати</button>
+                    <button type="submit" id="bas-export-submit" class="btn btn--primary">
+                        <i class="fas fa-download" aria-hidden="true"></i>
+                        <span class="bas-export-submit-label">Завантажити</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     <!-- Main Content -->
     <main class="main-content">
         <div class="container">
@@ -182,7 +192,8 @@
                     <form id="login-form" class="login-form">
                         <div class="form-group">
                             <label for="tax-id-input" class="form-label sr-only">Ідентифікаційний номер (ІПН)</label>
-                            <input type="text" id="tax-id-input" class="form-control" placeholder="Ваш ІПН" required autocomplete="off">
+                            <input type="text" id="tax-id-input" class="form-control" placeholder="Ваш ІПН" required
+                                autocomplete="off">
                         </div>
                         <button type="submit" id="login-btn" class="btn btn--primary btn--full-width">
                             <i class="fas fa-sign-in-alt"></i>
@@ -229,29 +240,30 @@
                     </section>
                     <!-- Table Section -->
                     <section class="table-section" id="table-section">
-                            <div class="table-header">
-                                <h3 id="table-title">Таблиця співробітників</h3>
-                                <div id="my-view-controls" class="table-header-controls hidden" aria-hidden="true">
-                                    <div class="my-view-filter-group">
-                                        <label for="my-view-year-filter" class="filter-label">Рік</label>
-                                        <select id="my-view-year-filter" class="filter-select">
-                                            <option value="">Всі роки</option>
-                                        </select>
-                                    </div>
-                                    <div class="my-view-filter-group">
-                                        <label for="my-view-status-filter" class="filter-label">Статус</label>
-                                        <select id="my-view-status-filter" class="filter-select">
-                                            <option value="">Всі статуси</option>
-                                            <option value="Заплановано">Заплановано</option>
-                                            <option value="Минулі відпустки">Минулі відпустки</option>
-                                        </select>
-                                    </div>
-                                    <button id="my-view-reset-filters" class="btn btn--secondary btn--sm filter-reset-btn" type="button">
-                                        <i class="fas fa-rotate-left"></i>
-                                        <span>Скинути фільтри</span>
-                                    </button>
+                        <div class="table-header">
+                            <h3 id="table-title">Таблиця співробітників</h3>
+                            <div id="my-view-controls" class="table-header-controls hidden" aria-hidden="true">
+                                <div class="my-view-filter-group">
+                                    <label for="my-view-year-filter" class="filter-label">Рік</label>
+                                    <select id="my-view-year-filter" class="filter-select">
+                                        <option value="">Всі роки</option>
+                                    </select>
                                 </div>
+                                <div class="my-view-filter-group">
+                                    <label for="my-view-status-filter" class="filter-label">Статус</label>
+                                    <select id="my-view-status-filter" class="filter-select">
+                                        <option value="">Всі статуси</option>
+                                        <option value="Заплановано">Заплановано</option>
+                                        <option value="Минулі відпустки">Минулі відпустки</option>
+                                    </select>
+                                </div>
+                                <button id="my-view-reset-filters" class="btn btn--secondary btn--sm filter-reset-btn"
+                                    type="button">
+                                    <i class="fas fa-rotate-left"></i>
+                                    <span>Скинути фільтри</span>
+                                </button>
                             </div>
+                        </div>
                         <div class="table-container">
                             <table class="vacations-table" id="vacations-table">
                                 <thead id="table-head">
@@ -274,21 +286,27 @@
                                 <p class="bas-actions__hint">Синхронізація з BAS Payroll/HR</p>
                             </div>
                             <div class="bas-actions__buttons">
-                                <button type="button" id="bas-import-button" class="btn btn--secondary bas-actions__button bas-actions__button--import">
+                                <button type="button" id="bas-import-button"
+                                    class="btn btn--secondary bas-actions__button bas-actions__button--import">
                                     <i class="fas fa-cloud-upload-alt" aria-hidden="true"></i>
                                     <span>Імпорт з BAS</span>
                                 </button>
-                                <button type="button" id="bas-export-button" class="btn btn--primary bas-actions__button bas-actions__button--export">
+                                <button type="button" id="bas-export-button"
+                                    class="btn btn--primary bas-actions__button bas-actions__button--export">
                                     <i class="fas fa-cloud-download-alt" aria-hidden="true"></i>
                                     <span>Експорт в BAS</span>
                                 </button>
                             </div>
-                            <input type="file" id="bas-import-file" class="bas-actions__file-input" accept=".csv,.json,.xml" hidden>
+                            <input type="file" id="bas-import-file" class="bas-actions__file-input"
+                                accept=".csv,.json,.xml" hidden>
                             <div id="bas-import-progress" class="bas-actions__progress hidden" aria-hidden="true">
                                 <div class="bas-actions__progress-track">
-                                    <div id="bas-import-progress-bar" class="bas-actions__progress-fill" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+                                    <div id="bas-import-progress-bar" class="bas-actions__progress-fill"
+                                        role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                    </div>
                                 </div>
-                                <span id="bas-import-progress-label" class="bas-actions__progress-label">Готово до імпорту</span>
+                                <span id="bas-import-progress-label" class="bas-actions__progress-label">Готово до
+                                    імпорту</span>
                             </div>
                             <div id="bas-sync-log" class="bas-actions__log hidden" aria-live="polite"></div>
                         </div>
@@ -309,6 +327,14 @@
     <!-- Firebase Configuration -->
     <script src="firebase-config.js"></script>
     <script src="bas-integration.js"></script>
+
+    <!-- Legacy app.js (will be removed after migration) -->
     <script src="app.js"></script>
-    </body>
-    </html>
+
+    <!-- New modular architecture (ES6 modules) -->
+    <!-- Uncomment when ready to switch:
+    <script type="module" src="js/main.js"></script>
+    -->
+</body>
+
+</html>
