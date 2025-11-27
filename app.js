@@ -2354,7 +2354,9 @@
 				const item = createElement("li", "info-history-item");
 				item.appendChild(createElement("div", "info-history-range", formatRange(period.start_date, period.end_date) || "—"));
 				const statusLabel = computeStatus([period]);
-				item.appendChild(createElement("div", "info-history-status", `Статус: ${statusLabel}`));
+				const statusWrapper = createElement("div", "info-history-status");
+				statusWrapper.appendChild(createStatusBadge(statusLabel));
+				item.appendChild(statusWrapper);
 				elements.employeeInfoHistoryList.appendChild(item);
 			});
 		}
