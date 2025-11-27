@@ -182,3 +182,94 @@ export function startOfWeekMondayUtc(date) {
     const diff = (day === 0 ? -6 : 1) - day;
     return addDaysUtc(date, diff);
 }
+
+/**
+ * Status Badge System
+ */
+
+// Status badge variants with their CSS classes and matching keywords
+export const STATUS_BADGE_VARIANTS = {
+    current: {
+        className: "status-badge--current",
+        matches: ["у відпустці", "відпустка", "active", "approved"]
+    },
+    planned: {
+        className: "status-badge--planned",
+        matches: ["заплановано", "запланована", "scheduled", "planned"]
+    },
+    past: {
+        className: "status-badge--past",
+        matches: ["минулі відпустки", "минулі", "past"]
+    },
+    work: {
+        className: "status-badge--work",
+        matches: ["на роботі", "at work", "working", "work"]
+    },
+    pending: {
+        className: "status-badge--pending",
+        matches: ["в очікуванні", "очікує", "pending", "awaiting", "очікування"]
+    },
+    rejected: {
+        className: "status-badge--rejected",
+        matches: ["відхилено", "rejected", "declined", "denied", "відхилена"]
+    },
+    cancelled: {
+        className: "status-badge--cancelled",
+        matches: ["скасовано", "cancelled", "canceled", "скасована", "скасовано hr"]
+    },
+    default: {
+        className: "status-badge--default",
+        matches: []
+    }
+};
+
+// Build lookup map for fast status key resolution
+const STATUS_BADGE_LOOKUP = new Map();
+Object.entries(STATUS_BADGE_VARIANTS).forEach(([key, variant]) => {
+    variant.matches.forEach(match => {
+        const normalized = match.trim().toLowerCase();
+        STATUS_BADGE_LOOKUP.set(normalized, key);
+    });
+});
+
+/**
+ * Normalize status key for lookup
+ * @param {string} value - Status label
+ * @returns {string} Normalized lowercase string
+ */
+function normalizeStatusKey(value) {
+    return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+/**
+ * Get status badge key from label
+ * @param {string} statusLabel - Status label
+ * @returns {string} Badge variant key
+ */
+export function getStatusBadgeKey(statusLabel) {
+    const normalized = normalizeStatusKey(statusLabel);
+    if (!normalized) {
+        return "default";
+    }
+    return STATUS_BADGE_LOOKUP.get(normalized) || "default";
+}
+
+/**
+ * Create a status badge element
+ * @param {string} statusLabel - Status label to display
+ * @returns {HTMLElement} Badge element
+ */
+export function createStatusBadge(statusLabel) {
+    const label = typeof statusLabel === "string" && statusLabel.trim().length > 0
+        ? statusLabel.trim()
+        : "—";
+    const key = getStatusBadgeKey(label);
+    const variant = STATUS_BADGE_VARIANTS[key] || STATUS_BADGE_VARIANTS.default;
+
+    const badge = document.createElement("span");
+    badge.className = `status-badge ${variant.className}`;
+    badge.textContent = label;
+    badge.dataset.statusKey = key;
+
+    return badge;
+}

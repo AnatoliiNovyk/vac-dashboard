@@ -8,12 +8,13 @@ import { appState, appData } from './core/state.js';
 
 // Import functional modules
 import { initAuth, showDashboard } from './modules/auth.js';
-import { initData, setupListeners, enrichEmployeeData, getEmployeeById } from './modules/data.js';
+import { initData, setupListeners, enrichEmployeeData, getEmployeeById, getEnrichedEmployeeById } from './modules/data.js';
 import { initUI, renderMainContent, rerenderUI } from './modules/ui.js';
 import { initCalendar, renderCalendar, navigateCalendar } from './modules/calendar.js';
 import { initVacationManager, openModal as openVacationModal } from './modules/vacation-manager.js';
 import { initBAS, appendBasLog, clearBasLog } from './modules/bas.js';
 import { initFilters, applyFilters, resetFilters } from './modules/filters.js';
+import { initEmployeeInfo, openEmployeeInfoModal, closeEmployeeInfoModal, refreshEmployeeInfoModal } from './modules/employee-info.js';
 
 // Initialize Firebase
 const firebaseConfig = window.firebaseConfig || {
@@ -64,7 +65,18 @@ const elements = {
     basImportProgress: document.getElementById("bas-import-progress"),
     basImportProgressBar: document.getElementById("bas-import-progress-bar"),
     basImportProgressLabel: document.getElementById("bas-import-progress-label"),
-    basSyncLog: document.getElementById("bas-sync-log")
+    basSyncLog: document.getElementById("bas-sync-log"),
+    employeeInfoModal: document.getElementById("employee-info-modal"),
+    employeeInfoClose: document.getElementById("employee-info-close"),
+    employeeInfoName: document.getElementById("employee-info-name"),
+    employeeInfoTaxId: document.getElementById("employee-info-tax-id"),
+    employeeInfoDepartment: document.getElementById("employee-info-department"),
+    employeeInfoPosition: document.getElementById("employee-info-position"),
+    employeeInfoManager: document.getElementById("employee-info-manager"),
+    employeeInfoAccrued: document.getElementById("employee-info-accrued"),
+    employeeInfoBalance: document.getElementById("employee-info-balance"),
+    employeeInfoHistoryList: document.getElementById("employee-info-history-list"),
+    employeeInfoHistoryEmpty: document.getElementById("employee-info-history-empty")
 };
 
 // Initialize modules
@@ -75,6 +87,7 @@ initCalendar({ elements });
 initVacationManager({ db, elements });
 initBAS({ functions, elements });
 initFilters({ elements });
+initEmployeeInfo(elements, getEnrichedEmployeeById, window.computeStatus);
 
 // Set up global callbacks for cross-module communication
 window.onUserAuthenticated = async (user) => {
@@ -119,7 +132,11 @@ window.onCalendarNavigate = () => {
 
 // Expose functions for legacy compatibility and cross-module access
 window.openVacationModal = openVacationModal;
+window.openEmployeeInfoModal = openEmployeeInfoModal;
+window.closeEmployeeInfoModal = closeEmployeeInfoModal;
+window.refreshEmployeeInfoModal = refreshEmployeeInfoModal;
 window.getEmployeeById = getEmployeeById;
+window.getEnrichedEmployeeById = getEnrichedEmployeeById;
 window.enrichEmployeeData = enrichEmployeeData;
 window.appData = appData;
 window.appState = appState;
