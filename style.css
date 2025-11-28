@@ -823,6 +823,14 @@ select.form-control {
   max-width: 500px;
 }
 
+.auth-card__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  margin-bottom: var(--space-24);
+}
+
 .welcome-icon {
   font-size: 4rem;
   color: var(--color-primary);
@@ -2291,7 +2299,7 @@ select.form-control {
 
 .status-badge--past {
   background-color: #90a4ae;
-  border-color: rgba(144, 164, 174, 0.35);
+  border-color: rgba(144, 164,  174, 0.35);
   color: var(--color-cream-50);
 }
 
@@ -2400,4 +2408,11 @@ select.form-control {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.auth-card__logo {
+  display: block;
+  width: 140px;
+  height: auto;
+  object-fit: contain;
 }
