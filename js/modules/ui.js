@@ -81,6 +81,7 @@ function renderTabs(userDoc) {
 
     clearNode(elements.tabsNav);
     const tabs = getVisibleTabs(userDoc);
+    console.log('[ui] renderTabs: visible tabs:', tabs, 'for user:', userDoc);
 
     tabs.forEach((tabName, index) => {
         const button = createElement("button", "tab-button", tabName);

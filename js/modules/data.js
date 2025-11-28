@@ -86,6 +86,11 @@ function normalizeEmployeeDoc(doc) {
         updatedAt: rawAllocation.updatedAt ?? null
     };
 
+    // Check for root-level role fields (new structure) or fallback to roleFlags (old structure)
+    const isHR = data.isHR !== undefined ? Boolean(data.isHR) : roleFlags.isHR;
+    const isManager = data.isManager !== undefined ? Boolean(data.isManager) : roleFlags.isManager;
+    const isHRHead = data.isHRHead !== undefined ? Boolean(data.isHRHead) : roleFlags.isHRHead;
+
     return {
         id: doc.id,
         fullName: data.full_name || `${data.name || ""} ${data.surname || ""}`.trim(),
@@ -98,10 +103,10 @@ function normalizeEmployeeDoc(doc) {
         total_vacation_days: data.total_vacation_days ?? 0,
         used_vacation_days: data.used_vacation_days ?? 0,
         tax_id: data.tax_id || "",
-        roleFlags,
-        isHR: roleFlags.isHR,
-        isManager: roleFlags.isManager,
-        isHRHead: roleFlags.isHRHead,
+        roleFlags, // Keep for legacy if needed
+        isHR,
+        isManager,
+        isHRHead,
         allocation,
         raw: data
     };

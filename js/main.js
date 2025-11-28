@@ -7,7 +7,7 @@ import { connectEmulatorsIfNeeded } from './core/config.js';
 import { appState, appData } from './core/state.js';
 
 // Import functional modules
-import { initAuth, showDashboard } from './modules/auth.js';
+import { initAuth, showDashboard, refreshAuthClaims } from './modules/auth.js';
 import { initData, setupListeners, enrichEmployeeData, getEmployeeById, getEnrichedEmployeeById } from './modules/data.js';
 import { initUI, renderMainContent, rerenderUI } from './modules/ui.js';
 import { initCalendar, renderCalendar, navigateCalendar } from './modules/calendar.js';
@@ -46,6 +46,7 @@ const elements = {
     currentUserName: document.getElementById("current-user-name"),
     currentUserRole: document.getElementById("current-user-role"),
     mainContent: document.getElementById("main-content"),
+    tableBody: document.getElementById("table-body"),
     filtersSection: document.getElementById("filters-section"),
     filtersGrid: document.getElementById("filters-grid"),
     calendar: document.getElementById("calendar"),
@@ -94,13 +95,22 @@ window.onUserAuthenticated = async (user) => {
     console.log('[main] User authenticated, loading data...');
 
     try {
+        // Refresh auth claims
+        await refreshAuthClaims(user);
+
         // Load user document from Firestore
-        const userDoc = await db.collection('employees').doc(user.uid).get();
+        const userDoc = await db.collection('employees').doc(user.uid).get({ source: 'server' });
         if (!userDoc.exists) {
             throw new Error('User document not found');
         }
 
-        appState.currentUser = { id: userDoc.id, ...userDoc.data() };
+        const userData = userDoc.data();
+        console.log('[main] Raw userDoc.data():', userData);
+        console.log('[main] Object keys:', Object.keys(userData));
+        console.log('[main] Explicit isHR check:', userData.isHR, userDoc.get('isHR'));
+
+        appState.currentUser = { id: userDoc.id, ...userData };
+        console.log('[main] Current user loaded:', appState.currentUser);
 
         // Set up realtime listeners
         setupListeners();
