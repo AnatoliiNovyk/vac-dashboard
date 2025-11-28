@@ -1,0 +1,67 @@
+/* Calendar Fix Styles */
+
+/* Ensure calendar days have relative positioning for any absolute children */
+.calendar-day {
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+/* Current Vacation (In Progress) - Teal */
+.calendar-day--current {
+    background-color: var(--color-teal-100, #e0f2f1);
+    /* Light teal background */
+    border: 2px solid var(--color-teal-500, #009688);
+    color: var(--color-teal-900, #004d40);
+}
+
+/* Use a stronger fill for better visibility if preferred, or keep the outline style */
+/* Let's try a solid fill for "current" to match the user's expectation of "highlighting" */
+.calendar-day--current {
+    background-color: var(--color-teal-500, #009688) !important;
+    color: white !important;
+    border: none;
+}
+
+.calendar-day--current .calendar-day-date {
+    color: white !important;
+}
+
+/* Planned Vacation - Orange/Brown */
+.calendar-day--planned {
+    background-color: var(--color-orange-400, #ff7043) !important;
+    color: white !important;
+    border: none;
+}
+
+.calendar-day--planned .calendar-day-date {
+    color: white !important;
+}
+
+/* Past Vacation - Gray */
+.calendar-day--past {
+    background-color: var(--color-gray-200, #eeeeee) !important;
+    color: var(--color-text-secondary, #757575) !important;
+}
+
+/* Today highlight - Border only */
+.calendar-day--today {
+    box-shadow: inset 0 0 0 2px var(--color-primary, #009688);
+}
+
+/* Legend colors matching the days */
+.legend-color--current {
+    background-color: var(--color-teal-500, #009688);
+}
+
+.legend-color--planned {
+    background-color: var(--color-orange-400, #ff7043);
+}
+
+.legend-color--past {
+    background-color: var(--color-gray-200, #eeeeee);
+}
+
+/* Hover effects */
+.calendar-day:hover {
+    filter: brightness(0.95);
+}

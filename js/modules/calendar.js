@@ -1,6 +1,6 @@
 /**
  * Calendar Module
- * Renders vacation calendar for teams (original implementation from app.js)
+ * Renders vacation calendar for teams
  */
 
 import { appState } from '../core/state.js';
@@ -120,22 +120,6 @@ export function renderCalendar(employees, options = {}) {
         });
     });
 
-    // VISUAL DEBUG
-    const debugInfo = document.createElement('div');
-    debugInfo.style.background = '#ffebee';
-    debugInfo.style.color = '#c62828';
-    debugInfo.style.padding = '10px';
-    debugInfo.style.marginBottom = '10px';
-    debugInfo.style.border = '1px solid #ef9a9a';
-    debugInfo.innerHTML = `
-        <strong>DEBUG INFO:</strong><br>
-        Employees: ${employees ? employees.length : 0}<br>
-        First Employee: ${employees && employees[0] ? employees[0].fullName : 'N/A'}<br>
-        Vacations (1st Emp): ${employees && employees[0] && employees[0].vacationPeriods ? employees[0].vacationPeriods.length : 'undefined'}<br>
-        Relevant Periods (calc): ${typeof relevantPeriods !== 'undefined' ? relevantPeriods.length : 'N/A'}
-    `;
-    elements.calendar.appendChild(debugInfo);
-
     const candidateIso = relevantPeriods
         .map(period => (period.status === "У відпустці" && period.start_date <= todayIso ? todayIso : period.start_date))
         .sort()[0];
@@ -179,60 +163,61 @@ export function renderCalendar(employees, options = {}) {
         const dayIso = formatDate(cursor);
         const inCurrentMonth = cursor.getUTCMonth() === monthStart.getUTCMonth();
         const day = createElement("div", "calendar-day");
+
+        // Calculate which vacation periods overlap with this day
+        const dayStatuses = relevantPeriods.filter(period =>
+            period.start_date <= dayIso && dayIso <= period.end_date
+        );
+
         if (!inCurrentMonth) {
             day.classList.add("calendar-day--other-month");
-            const currentEntries = [];
-            const plannedEntries = [];
-            const pastEntries = [];
-            dayStatuses.forEach(period => {
-                if (period.status === "У відпустці") {
-                    currentEntries.push(period);
-                    summary.current.add(period.employeeId);
-                } else if (period.status === "Заплановано") {
-                    plannedEntries.push(period);
-                    summary.planned.add(period.employeeId);
-                } else if (period.status === PAST_STATUS_LABEL) {
-                    pastEntries.push(period);
-                    summary.past.add(period.employeeId);
-                }
-            });
-
-            if (currentEntries.length > 0) {
-                const badge = createElement(
-                    "div",
-                    "calendar-day-badge calendar-day-badge--current",
-                    String(currentEntries.length)
-                );
-                badge.title = currentEntries
-                    .map(entry => `${entry.employeeName} — ${entry.tooltipRange}`)
-                    .join("\n");
-                badgeContainer.appendChild(badge);
-            }
-            if (plannedEntries.length > 0) {
-                const badge = createElement(
-                    "div",
-                    "calendar-day-badge calendar-day-badge--planned",
-                    String(plannedEntries.length)
-                );
-                badge.title = plannedEntries
-                    .map(entry => `${entry.employeeName} — ${entry.tooltipRange}`)
-                    .join("\n");
-                badgeContainer.appendChild(badge);
-            }
-            if (pastEntries.length > 0) {
-                const badge = createElement(
-                    "div",
-                    "calendar-day-badge calendar-day-badge--past",
-                    String(pastEntries.length)
-                );
-                badge.title = pastEntries
-                    .map(entry => `${entry.employeeName} — ${entry.tooltipRange}`)
-                    .join("\n");
-                badgeContainer.appendChild(badge);
-            }
-            day.appendChild(badgeContainer);
         }
 
+        // Create date number element
+        const dateNumber = createElement("div", "calendar-day-date", String(cursor.getUTCDate()));
+
+        // Process vacation statuses for this day
+        const currentEntries = [];
+        const plannedEntries = [];
+        const pastEntries = [];
+
+        dayStatuses.forEach(period => {
+            if (period.status === "У відпустці") {
+                currentEntries.push(period);
+                summary.current.add(period.employeeId);
+            } else if (period.status === "Заплановано") {
+                plannedEntries.push(period);
+                summary.planned.add(period.employeeId);
+            } else if (period.status === PAST_STATUS_LABEL) {
+                pastEntries.push(period);
+                summary.past.add(period.employeeId);
+            }
+        });
+
+        // Apply status classes to the day element
+        if (currentEntries.length > 0) {
+            day.classList.add("calendar-day--current");
+        } else if (plannedEntries.length > 0) {
+            day.classList.add("calendar-day--planned");
+        } else if (pastEntries.length > 0) {
+            day.classList.add("calendar-day--past");
+        }
+
+        // Build tooltip for this day
+        const allEntries = [...currentEntries, ...plannedEntries, ...pastEntries];
+        if (allEntries.length > 0) {
+            const tooltipLines = allEntries.map(entry =>
+                `${entry.employeeName} — ${entry.tooltipRange}`
+            );
+            day.title = tooltipLines.join("\n");
+        }
+
+        // Check if today
+        if (dayIso === todayIso) {
+            day.classList.add("calendar-day--today");
+        }
+
+        day.appendChild(dateNumber);
         calendarGrid.appendChild(day);
         cursor = addDaysUtc(cursor, 1);
     }
