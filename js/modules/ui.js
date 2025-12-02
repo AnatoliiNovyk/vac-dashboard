@@ -196,6 +196,11 @@ function renderMyView(employees, userDoc) {
     if (elements.statsGrid) {
         clearNode(elements.statsGrid);
     }
+
+    // Hide BAS actions
+    if (elements.basActions) {
+        toggleHidden(elements.basActions, true);
+    }
 }
 
 /**
@@ -214,6 +219,11 @@ function renderManagerView(employees, userDoc) {
     if (elements.statsGrid) {
         clearNode(elements.statsGrid);
     }
+
+    // Hide BAS actions
+    if (elements.basActions) {
+        toggleHidden(elements.basActions, true);
+    }
 }
 
 /**
@@ -230,6 +240,11 @@ function renderHRView(employees, userDoc) {
 
     // Render stats
     renderStats(employees);
+
+    // Show BAS actions
+    if (elements.basActions) {
+        toggleHidden(elements.basActions, false);
+    }
 }
 
 /**

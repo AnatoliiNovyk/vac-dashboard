@@ -67,6 +67,7 @@ const elements = {
     basImportProgressBar: document.getElementById("bas-import-progress-bar"),
     basImportProgressLabel: document.getElementById("bas-import-progress-label"),
     basSyncLog: document.getElementById("bas-sync-log"),
+    basActions: document.getElementById("bas-actions"),
     employeeInfoModal: document.getElementById("employee-info-modal"),
     employeeInfoClose: document.getElementById("employee-info-close"),
     employeeInfoName: document.getElementById("employee-info-name"),
