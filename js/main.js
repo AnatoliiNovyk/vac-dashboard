@@ -79,6 +79,29 @@ const elements = {
     employeeInfoHistoryEmpty: document.getElementById("employee-info-history-empty")
 };
 
+// Utility function for status computation (used by multiple modules)
+window.computeStatus = (periods) => {
+    if (!periods || periods.length === 0) {
+        return "На роботі";
+    }
+
+    const today = new Date();
+    const todayIso = today.toISOString().split('T')[0];
+
+    for (const period of periods) {
+        if (period.start_date <= todayIso && period.end_date >= todayIso) {
+            return "У відпустці";
+        }
+    }
+
+    const futurePeriods = periods.filter(p => p.start_date > todayIso);
+    if (futurePeriods.length > 0) {
+        return "Заплановано";
+    }
+
+    return "На роботі";
+};
+
 // Initialize modules
 initAuth({ auth, functions, elements });
 initData({ db, elements });
@@ -163,27 +186,6 @@ window.db = db;
 window.auth = auth;
 window.functions = functions;
 
-// Utility function for status computation (used by multiple modules)
-window.computeStatus = (periods) => {
-    if (!periods || periods.length === 0) {
-        return "На роботі";
-    }
 
-    const today = new Date();
-    const todayIso = today.toISOString().split('T')[0];
-
-    for (const period of periods) {
-        if (period.start_date <= todayIso && period.end_date >= todayIso) {
-            return "У відпустці";
-        }
-    }
-
-    const futurePeriods = periods.filter(p => p.start_date > todayIso);
-    if (futurePeriods.length > 0) {
-        return "Заплановано";
-    }
-
-    return "На роботі";
-};
 
 console.log('[main] Modular architecture initialized');
