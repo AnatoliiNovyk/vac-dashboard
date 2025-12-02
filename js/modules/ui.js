@@ -294,17 +294,19 @@ function renderEmployeeTable(employees) {
         const actionsCell = createElement("td", "actions-cell");
         const actionsContainer = createElement("div", "table-actions");
 
-        // Info button
-        const infoBtn = createElement("button", "btn btn--icon btn--secondary");
-        infoBtn.title = "Інформація";
-        infoBtn.innerHTML = '<i class="fas fa-info-circle"></i>';
-        infoBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            if (window.openEmployeeInfoModal) {
-                window.openEmployeeInfoModal(emp.id);
-            }
-        });
-        actionsContainer.appendChild(infoBtn);
+        // Info button (only for HR View)
+        if (appState.currentTab === "HR View") {
+            const infoBtn = createElement("button", "btn btn--icon btn--secondary");
+            infoBtn.title = "Інформація";
+            infoBtn.innerHTML = '<i class="fas fa-info-circle"></i>';
+            infoBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                if (window.openEmployeeInfoModal) {
+                    window.openEmployeeInfoModal(emp.id);
+                }
+            });
+            actionsContainer.appendChild(infoBtn);
+        }
 
         // Edit button (only for HR)
         if (appState.currentUser && (appState.currentUser.isHR || appState.currentUser.isHRHead)) {
