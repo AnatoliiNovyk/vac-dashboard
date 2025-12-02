@@ -29,7 +29,7 @@ export function initVacationManager(deps) {
     }
 
     if (elements.vacationModalCancel) {
-        elements.vacationModalCancel.addEventListener('click', () => closeModal());
+        elements.vacationModalCancel.addEventListener('click', () => closeModal(true));
     }
 
     if (elements.vacationPeriodAddBtn) {

@@ -139,8 +139,18 @@ window.onCalendarNavigate = () => {
     renderCalendar(employees);
 };
 
+// Wrapper function to fetch employee by ID before opening modal
+function openVacationModalWrapper(employeeId) {
+    const employee = getEnrichedEmployeeById(employeeId);
+    if (!employee) {
+        console.error('[main] Employee not found:', employeeId);
+        return;
+    }
+    openVacationModal(employee);
+}
+
 // Expose functions for legacy compatibility and cross-module access
-window.openVacationModal = openVacationModal;
+window.openVacationModal = openVacationModalWrapper;
 window.openEmployeeInfoModal = openEmployeeInfoModal;
 window.closeEmployeeInfoModal = closeEmployeeInfoModal;
 window.refreshEmployeeInfoModal = refreshEmployeeInfoModal;
