@@ -191,6 +191,11 @@ function renderMyView(employees, userDoc) {
 
     // Render calendar
     renderCalendar(employees);
+
+    // Clear stats
+    if (elements.statsGrid) {
+        clearNode(elements.statsGrid);
+    }
 }
 
 /**
@@ -204,6 +209,11 @@ function renderManagerView(employees, userDoc) {
 
     // Render calendar
     renderCalendar(employees);
+
+    // Clear stats
+    if (elements.statsGrid) {
+        clearNode(elements.statsGrid);
+    }
 }
 
 /**
@@ -217,6 +227,9 @@ function renderHRView(employees, userDoc) {
 
     // Render calendar
     renderCalendar(employees);
+
+    // Render stats
+    renderStats(employees);
 }
 
 /**
@@ -359,3 +372,46 @@ function getNextVacation(periods) {
 
 
 
+/**
+ * Render statistics cards
+ * @param {Array} employees - Employees to calculate stats from
+ */
+function renderStats(employees) {
+    if (!elements.statsGrid) {
+        return;
+    }
+
+    clearNode(elements.statsGrid);
+
+    // Calculate stats
+    const totalEmployees = employees.length;
+    const onVacation = employees.filter(emp => emp.computedStatus === "У відпустці").length;
+    const planned = employees.filter(emp => emp.computedStatus === "Заплановано").length;
+
+    // Create cards
+    const stats = [
+        { label: "Співробітників", value: totalEmployees, icon: "fa-users", color: "blue" },
+        { label: "У відпустці", value: onVacation, icon: "fa-umbrella-beach", color: "green" },
+        { label: "Заплановано", value: planned, icon: "fa-calendar-alt", color: "orange" }
+    ];
+
+    stats.forEach(stat => {
+        const card = createElement("div", `stat-card stat-card--${stat.color}`);
+
+        const iconDiv = createElement("div", "stat-card__icon");
+        iconDiv.innerHTML = `<i class="fas ${stat.icon}"></i>`;
+
+        const contentDiv = createElement("div", "stat-card__content");
+
+        const valueDiv = createElement("div", "stat-card__value", String(stat.value));
+        const labelDiv = createElement("div", "stat-card__label", stat.label);
+
+        contentDiv.appendChild(valueDiv);
+        contentDiv.appendChild(labelDiv);
+
+        card.appendChild(iconDiv);
+        card.appendChild(contentDiv);
+
+        elements.statsGrid.appendChild(card);
+    });
+}

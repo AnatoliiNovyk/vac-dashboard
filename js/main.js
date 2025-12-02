@@ -48,6 +48,7 @@ const elements = {
     tableBody: document.getElementById("table-body"),
     filtersSection: document.getElementById("filters-section"),
     filtersGrid: document.getElementById("filters-grid"),
+    statsGrid: document.getElementById("stats-grid"),
     calendar: document.getElementById("vacation-calendar"),
     calendarControls: document.getElementById("calendar-controls"),
     calendarLegend: document.getElementById("calendar-legend"),
