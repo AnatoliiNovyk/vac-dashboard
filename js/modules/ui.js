@@ -194,8 +194,10 @@ function renderMyView(employees, userDoc) {
     // Render calendar
     renderCalendar(employees);
 
-    // Clear stats
-    if (elements.statsGrid) {
+    // Render personal stats
+    if (employees.length > 0) {
+        renderPersonalStats(employees[0]);
+    } else if (elements.statsGrid) {
         clearNode(elements.statsGrid);
     }
 
@@ -480,6 +482,57 @@ function renderStats(employees) {
         const contentDiv = createElement("div", "stat-card__content");
 
         const valueDiv = createElement("div", "stat-card__value", String(stat.value));
+        const labelDiv = createElement("div", "stat-card__label", stat.label);
+
+        contentDiv.appendChild(valueDiv);
+        contentDiv.appendChild(labelDiv);
+
+        card.appendChild(iconDiv);
+        card.appendChild(contentDiv);
+
+        elements.statsGrid.appendChild(card);
+    });
+}
+
+/**
+ * Render personal statistics cards for My View
+ * @param {Object} employee - Current employee data
+ */
+function renderPersonalStats(employee) {
+    if (!elements.statsGrid || !employee) {
+        return;
+    }
+
+    clearNode(elements.statsGrid);
+
+    // Calculate stats
+    const accrued = employee.allocation?.totalAllocatedDays ?? employee.total_vacation_days ?? 0;
+    const used = employee.used_vacation_days || 0;
+    const balance = employee.allocation?.balanceDays ?? (accrued - used);
+    const status = employee.computedStatus || "На роботі";
+
+    // Create cards
+    const stats = [
+        { label: "Нараховано", value: accrued, icon: "fa-calendar-plus", color: "blue" },
+        { label: "Використано", value: used, icon: "fa-calendar-minus", color: "orange" },
+        { label: "Залишок", value: balance, icon: "fa-calendar-check", color: "green" },
+        { label: "Статус", value: status, icon: "fa-user-clock", color: "teal", isText: true }
+    ];
+
+    stats.forEach(stat => {
+        const card = createElement("div", `stat-card stat-card--${stat.color}`);
+
+        const iconDiv = createElement("div", "stat-card__icon");
+        iconDiv.innerHTML = `<i class="fas ${stat.icon}"></i>`;
+
+        const contentDiv = createElement("div", "stat-card__content");
+
+        const valueDiv = createElement("div", "stat-card__value", String(stat.value));
+        // Adjust font size for text value (Status)
+        if (stat.isText) {
+            valueDiv.style.fontSize = "1.2rem";
+        }
+
         const labelDiv = createElement("div", "stat-card__label", stat.label);
 
         contentDiv.appendChild(valueDiv);
