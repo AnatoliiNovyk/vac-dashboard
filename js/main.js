@@ -8,7 +8,7 @@ import { appState, appData } from './core/state.js';
 
 // Import functional modules
 import { initAuth, showDashboard, refreshAuthClaims } from './modules/auth.js';
-import { initData, setupListeners, enrichEmployeeData, getEmployeeById, getEnrichedEmployeeById } from './modules/data.js';
+import { initData, setupListeners, enrichEmployeeData, getEmployeeById, getEnrichedEmployeeById, getManagerEmployees } from './modules/data.js';
 import { initUI, renderMainContent, rerenderUI } from './modules/ui.js';
 import { initCalendar, renderCalendar, navigateCalendar } from './modules/calendar.js';
 import { initVacationManager, openModal as openVacationModal } from './modules/vacation-manager.js';
@@ -113,6 +113,9 @@ initVacationManager({ db, elements });
 initBAS({ functions, elements });
 initFilters({ elements });
 initEmployeeInfo(elements, getEnrichedEmployeeById, window.computeStatus);
+
+// Expose getManagerEmployees for UI module
+window.getManagerEmployees = getManagerEmployees;
 
 // Set up global callbacks for cross-module communication
 window.onUserAuthenticated = async (user) => {
