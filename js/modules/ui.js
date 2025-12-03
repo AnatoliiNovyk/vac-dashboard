@@ -302,15 +302,20 @@ function renderEmployeeTable(employees) {
     if (!employees || employees.length === 0) {
         const emptyRow = createElement("tr", "empty-row");
         const emptyCell = createElement("td", "", "Немає даних для відображення");
-        emptyCell.colSpan = 8;
+        emptyCell.colSpan = 9;
         emptyRow.appendChild(emptyCell);
         elements.tableBody.appendChild(emptyRow);
         return;
     }
 
-    employees.forEach(emp => {
+    employees.forEach((emp, index) => {
         const row = createElement("tr", "employee-row");
         row.dataset.employeeId = emp.id;
+
+        // Number
+        const numCell = createElement("td", "");
+        numCell.textContent = index + 1;
+        row.appendChild(numCell);
 
         // Name
         const nameCell = createElement("td", "");
