@@ -78,6 +78,14 @@ export function renderFilters(userDoc, tab) {
         elements.filtersGrid.appendChild(statusFilter);
     }
 
+    // Reset button (for HR/Manager views)
+    if (tab === "HR View" || tab === "Manager View") {
+        const resetButton = createResetButton();
+        if (resetButton) {
+            elements.filtersGrid.appendChild(resetButton);
+        }
+    }
+
     toggleHidden(elements.filtersSection, false);
 }
 
@@ -141,3 +149,27 @@ function createStatusFilter() {
     wrapper.appendChild(select);
     return wrapper;
 }
+
+/**
+ * Create reset button element
+ * @returns {HTMLElement|null}
+ */
+function createResetButton() {
+    const wrapper = createElement("div", "filter-item filter-reset");
+    const button = createElement("button", "btn btn--secondary");
+    button.type = "button";
+    button.innerHTML = '<i class="fas fa-rotate-left"></i> Скинути фільтри';
+
+    button.addEventListener("click", () => {
+        resetFilters();
+        // Reset select elements
+        const deptSelect = document.getElementById("filter-department");
+        const statusSelect = document.getElementById("filter-status");
+        if (deptSelect) deptSelect.value = "";
+        if (statusSelect) statusSelect.value = "";
+    });
+
+    wrapper.appendChild(button);
+    return wrapper;
+}
+

@@ -443,15 +443,18 @@ function renderStats(employees) {
     clearNode(elements.statsGrid);
 
     // Calculate stats
+    // Calculate stats
     const totalEmployees = employees.length;
     const onVacation = employees.filter(emp => emp.computedStatus === "У відпустці").length;
     const planned = employees.filter(emp => emp.computedStatus === "Заплановано").length;
+    const working = totalEmployees - onVacation - planned;
 
     // Create cards
     const stats = [
         { label: "Співробітників", value: totalEmployees, icon: "fa-users", color: "blue" },
         { label: "У відпустці", value: onVacation, icon: "fa-umbrella-beach", color: "green" },
-        { label: "Заплановано", value: planned, icon: "fa-calendar-alt", color: "orange" }
+        { label: "Заплановано", value: planned, icon: "fa-calendar-alt", color: "orange" },
+        { label: "На роботі", value: working, icon: "fa-briefcase", color: "teal" }
     ];
 
     stats.forEach(stat => {
