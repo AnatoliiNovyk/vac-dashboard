@@ -201,6 +201,9 @@ function renderMyView(employees, userDoc) {
     if (elements.basActions) {
         toggleHidden(elements.basActions, true);
     }
+
+    // Show all table columns
+    showAllTableColumns();
 }
 
 /**
@@ -224,6 +227,41 @@ function renderManagerView(employees, userDoc) {
     if (elements.basActions) {
         toggleHidden(elements.basActions, true);
     }
+
+    // Hide Department and Actions columns in table header
+    hideTableColumns(['col-department', 'col-actions']);
+}
+
+/**
+ * Hide/show table columns by class names
+ * @param {Array<string>} classNames - Array of column class names to hide
+ */
+function hideTableColumns(classNames) {
+    const thead = document.getElementById("table-head");
+    if (!thead) return;
+
+    const headers = thead.querySelectorAll("th");
+    headers.forEach(th => {
+        const shouldHide = classNames.some(className => th.classList.contains(className));
+        if (shouldHide) {
+            th.style.display = "none";
+        } else {
+            th.style.display = "";
+        }
+    });
+}
+
+/**
+ * Show all table columns
+ */
+function showAllTableColumns() {
+    const thead = document.getElementById("table-head");
+    if (!thead) return;
+
+    const headers = thead.querySelectorAll("th");
+    headers.forEach(th => {
+        th.style.display = "";
+    });
 }
 
 /**
@@ -245,6 +283,9 @@ function renderHRView(employees, userDoc) {
     if (elements.basActions) {
         toggleHidden(elements.basActions, false);
     }
+
+    // Show all table columns
+    showAllTableColumns();
 }
 
 /**
@@ -278,10 +319,12 @@ function renderEmployeeTable(employees) {
         nameCell.textContent = emp.fullName || emp.name || "—";
         row.appendChild(nameCell);
 
-        // Department
-        const deptCell = createElement("td", "");
-        deptCell.textContent = emp.departmentName || emp.department || "—";
-        row.appendChild(deptCell);
+        // Department (hide in Manager View)
+        if (appState.currentTab !== "Manager View") {
+            const deptCell = createElement("td", "");
+            deptCell.textContent = emp.departmentName || emp.department || "—";
+            row.appendChild(deptCell);
+        }
 
         // Position
         const posCell = createElement("td", "");
@@ -318,40 +361,43 @@ function renderEmployeeTable(employees) {
         balanceCell.textContent = balance;
         row.appendChild(balanceCell);
 
-        // Actions
-        const actionsCell = createElement("td", "actions-cell");
-        const actionsContainer = createElement("div", "table-actions");
 
-        // Info button (only for HR View)
-        if (appState.currentTab === "HR View") {
-            const infoBtn = createElement("button", "btn btn--icon btn--secondary");
-            infoBtn.title = "Інформація";
-            infoBtn.innerHTML = '<i class="fas fa-info-circle"></i>';
-            infoBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                if (window.openEmployeeInfoModal) {
-                    window.openEmployeeInfoModal(emp.id);
-                }
-            });
-            actionsContainer.appendChild(infoBtn);
+        // Actions (hide in Manager View)
+        if (appState.currentTab !== "Manager View") {
+            const actionsCell = createElement("td", "actions-cell");
+            const actionsContainer = createElement("div", "table-actions");
+
+            // Info button (only for HR View)
+            if (appState.currentTab === "HR View") {
+                const infoBtn = createElement("button", "btn btn--icon btn--secondary");
+                infoBtn.title = "Інформація";
+                infoBtn.innerHTML = '<i class="fas fa-info-circle"></i>';
+                infoBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    if (window.openEmployeeInfoModal) {
+                        window.openEmployeeInfoModal(emp.id);
+                    }
+                });
+                actionsContainer.appendChild(infoBtn);
+            }
+
+            // Edit button (only for HR)
+            if (appState.currentUser && (appState.currentUser.isHR || appState.currentUser.isHRHead)) {
+                const editBtn = createElement("button", "btn btn--icon btn--primary");
+                editBtn.title = "Редагувати відпустки";
+                editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+                editBtn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    if (window.openVacationModal) {
+                        window.openVacationModal(emp.id);
+                    }
+                });
+                actionsContainer.appendChild(editBtn);
+            }
+
+            actionsCell.appendChild(actionsContainer);
+            row.appendChild(actionsCell);
         }
-
-        // Edit button (only for HR)
-        if (appState.currentUser && (appState.currentUser.isHR || appState.currentUser.isHRHead)) {
-            const editBtn = createElement("button", "btn btn--icon btn--primary");
-            editBtn.title = "Редагувати відпустки";
-            editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-            editBtn.addEventListener("click", (e) => {
-                e.stopPropagation();
-                if (window.openVacationModal) {
-                    window.openVacationModal(emp.id);
-                }
-            });
-            actionsContainer.appendChild(editBtn);
-        }
-
-        actionsCell.appendChild(actionsContainer);
-        row.appendChild(actionsCell);
 
         // Row click handler
         row.addEventListener("click", () => {
