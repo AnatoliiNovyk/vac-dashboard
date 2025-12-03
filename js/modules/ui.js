@@ -157,7 +157,9 @@ async function getEmployeesForView(tab, userDoc) {
     if (tab === "Manager View") {
         // Get manager's team
         if (window.getManagerEmployees) {
-            return await window.getManagerEmployees(userDoc.id);
+            const teamRaw = await window.getManagerEmployees(userDoc.id);
+            const teamIds = new Set(teamRaw.map(e => e.id));
+            return employees.filter(e => teamIds.has(e.id));
         }
     }
 
