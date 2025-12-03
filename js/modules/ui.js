@@ -218,10 +218,8 @@ function renderManagerView(employees, userDoc) {
     // Render calendar
     renderCalendar(employees);
 
-    // Clear stats
-    if (elements.statsGrid) {
-        clearNode(elements.statsGrid);
-    }
+    // Render stats for team
+    renderStats(employees);
 
     // Hide BAS actions
     if (elements.basActions) {
