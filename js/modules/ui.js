@@ -157,7 +157,9 @@ async function getEmployeesForView(tab, userDoc) {
     if (tab === "Manager View") {
         // Get manager's team
         if (window.getManagerEmployees) {
-            return await window.getManagerEmployees(userDoc.id);
+            const teamRaw = await window.getManagerEmployees(userDoc.id);
+            const teamIds = new Set(teamRaw.map(e => e.id));
+            return employees.filter(e => teamIds.has(e.id));
         }
     }
 
@@ -202,8 +204,11 @@ function renderMyView(employees, userDoc) {
         toggleHidden(elements.basActions, true);
     }
 
-    // Show all table columns
+    // Show all table columns first
     showAllTableColumns();
+
+    // Hide unnecessary columns for My View
+    hideTableColumns(['col-name', 'col-department', 'col-position', 'col-actions']);
 }
 
 /**
@@ -317,22 +322,26 @@ function renderEmployeeTable(employees) {
         numCell.textContent = index + 1;
         row.appendChild(numCell);
 
-        // Name
-        const nameCell = createElement("td", "");
-        nameCell.textContent = emp.fullName || emp.name || "—";
-        row.appendChild(nameCell);
+        // Name (hide in My View)
+        if (appState.currentTab !== "My View") {
+            const nameCell = createElement("td", "");
+            nameCell.textContent = emp.fullName || emp.name || "—";
+            row.appendChild(nameCell);
+        }
 
-        // Department (hide in Manager View)
-        if (appState.currentTab !== "Manager View") {
+        // Department (hide in Manager View and My View)
+        if (appState.currentTab !== "Manager View" && appState.currentTab !== "My View") {
             const deptCell = createElement("td", "");
             deptCell.textContent = emp.departmentName || emp.department || "—";
             row.appendChild(deptCell);
         }
 
-        // Position
-        const posCell = createElement("td", "");
-        posCell.textContent = emp.position || "—";
-        row.appendChild(posCell);
+        // Position (hide in My View)
+        if (appState.currentTab !== "My View") {
+            const posCell = createElement("td", "");
+            posCell.textContent = emp.position || "—";
+            row.appendChild(posCell);
+        }
 
         // Status with badge
         const statusCell = createElement("td", "");
@@ -365,8 +374,8 @@ function renderEmployeeTable(employees) {
         row.appendChild(balanceCell);
 
 
-        // Actions (hide in Manager View)
-        if (appState.currentTab !== "Manager View") {
+        // Actions (hide in Manager View and My View)
+        if (appState.currentTab !== "Manager View" && appState.currentTab !== "My View") {
             const actionsCell = createElement("td", "actions-cell");
             const actionsContainer = createElement("div", "table-actions");
 
