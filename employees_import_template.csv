@@ -1,0 +1,12 @@
+tax_id,first_name,surname,middle_name,department,position,manager_tax_id,totalAllocatedDays,balanceDays,is_hr,is_hr_head,is_manager
+1234567890,Олексій,Коваленко,Іванович,IT,Senior Developer,1122334455,24,16,false,false,false
+0987654321,Марина,Петренко,Олександрівна,Marketing,Marketing Specialist,9999999999,22,17,false,false,false
+9999999999,Петро,Коваль,Миколайович,Executive,Генеральний директор,,30,20,false,false,true
+1122334455,Дмитро,Білий,Сергійович,IT,IT Manager,9999999999,24,14,false,false,true
+5566778899,Анна,Сидоренко,Петрівна,Finance,Finance Manager,9999999999,24,20,false,false,true
+1231231234,Володимир,Шевченко,Олегович,HR,HR Manager,9999999999,28,14,true,true,false
+4564564567,Світлана,Мельник,Василівна,Finance,Accountant,5566778899,24,18,false,false,false
+7897897890,Ігор,Бондаренко,Андрійович,Sales,Sales Manager,9999999999,24,16,false,false,true
+0011223344,Тетяна,Козлова,Михайлівна,Sales,Sales Representative,7897897890,22,19,false,false,false
+3333333333,Оксана,Ткаченко,Ігорівна,HR,Senior HR Specialist,1231231234,24,17,true,false,false
+4444444444,Ірина,Коваленко,Степанівна,HR,HR Specialist,1231231234,22,17,true,false,false
