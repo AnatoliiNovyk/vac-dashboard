@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Файл вивантаження зовнішньої обробки для 1С:Підприємство 8.3
+    
+    ІНСТРУКЦІЯ ПО ІМПОРТУ:
+    1. Відкрийте 1С в режимі Конфігуратор
+    2. Меню: Файл → Новый → Внешняя обработка
+    3. Скопіюйте код модуля форми з файлу ЭкспортДляVacationDashboard_МодульОбъекта.bsl
+    4. Створіть реквізити та форму згідно з цим файлом
+    5. Збережіть як .epf: Файл → Сохранить как → ЭкспортДляVacationDashboard.epf
+-->
+<MetaDataObject xmlns="http://v8.1c.ru/8.3/MDClasses" xmlns:core="http://v8.1c.ru/8.1/data/core" xmlns:mdclass="http://v8.1c.ru/8.3/MDClasses" xmlns:form="http://v8.1c.ru/8.3/xcf/form" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.14">
+    <ExternalDataProcessor uuid="a1b2c3d4-e5f6-7890-abcd-ef1234567890">
+        <InternalInfo/>
+        <Properties>
+            <Name>ЭкспортДляVacationDashboard</Name>
+            <Synonym>
+                <core:item>
+                    <core:lang>ru</core:lang>
+                    <core:content>Экспорт для Vacation Dashboard</core:content>
+                </core:item>
+            </Synonym>
+            <Comment>Экспорт данных сотрудников для импорта в Vacation Dashboard</Comment>
+            <UseStandardCommands>false</UseStandardCommands>
+            <DefaultForm>ExternalDataProcessor.ЭкспортДляVacationDashboard.Form.Форма</DefaultForm>
+            <IncludeHelpInContents>false</IncludeHelpInContents>
+            <ExtendedPresentation/>
+            <Explanation/>
+        </Properties>
+        <ChildObjects>
+            <!-- Реквізити обробки -->
+            <Attribute uuid="11111111-1111-1111-1111-111111111111">
+                <Properties>
+                    <Name>Организация</Name>
+                    <Synonym>
+                        <core:item>
+                            <core:lang>ru</core:lang>
+                            <core:content>Организация</core:content>
+                        </core:item>
+                    </Synonym>
+                    <Type>
+                        <types>CatalogRef.Организации</types>
+                    </Type>
+                </Properties>
+            </Attribute>
+            <Attribute uuid="22222222-2222-2222-2222-222222222222">
+                <Properties>
+                    <Name>ДатаВыгрузки</Name>
+                    <Synonym>
+                        <core:item>
+                            <core:lang>ru</core:lang>
+                            <core:content>Дата выгрузки</core:content>
+                        </core:item>
+                    </Synonym>
+                    <Type>
+                        <types>Date</types>
+                        <dateQualifiers>
+                            <dateFractions>Date</dateFractions>
+                        </dateQualifiers>
+                    </Type>
+                </Properties>
+            </Attribute>
+            <Attribute uuid="33333333-3333-3333-3333-333333333333">
+                <Properties>
+                    <Name>КодировкаФайла</Name>
+                    <Synonym>
+                        <core:item>
+                            <core:lang>ru</core:lang>
+                            <core:content>Кодировка файла</core:content>
+                        </core:item>
+                    </Synonym>
+                    <Type>
+                        <types>String</types>
+                        <stringQualifiers>
+                            <length>20</length>
+                        </stringQualifiers>
+                    </Type>
+                </Properties>
+            </Attribute>
+            <Attribute uuid="44444444-4444-4444-4444-444444444444">
+                <Properties>
+                    <Name>РазделительПолей</Name>
+                    <Synonym>
+                        <core:item>
+                            <core:lang>ru</core:lang>
+                            <core:content>Разделитель полей</core:content>
+                        </core:item>
+                    </Synonym>
+                    <Type>
+                        <types>String</types>
+                        <stringQualifiers>
+                            <length>1</length>
+                        </stringQualifiers>
+                    </Type>
+                </Properties>
+            </Attribute>
+            <Attribute uuid="55555555-5555-5555-5555-555555555555">
+                <Properties>
+                    <Name>Лог</Name>
+                    <Synonym>
+                        <core:item>
+                            <core:lang>ru</core:lang>
+                            <core:content>Лог выполнения</core:content>
+                        </core:item>
+                    </Synonym>
+                    <Type>
+                        <types>String</types>
+                        <stringQualifiers/>
+                    </Type>
+                </Properties>
+            </Attribute>
+            <!-- Форма -->
+            <Form uuid="66666666-6666-6666-6666-666666666666">
+                <Properties>
+                    <Name>Форма</Name>
+                    <Synonym>
+                        <core:item>
+                            <core:lang>ru</core:lang>
+                            <core:content>Форма</core:content>
+                        </core:item>
+                    </Synonym>
+                    <FormType>Managed</FormType>
+                    <IncludeHelpInContents>false</IncludeHelpInContents>
+                    <UseStandardCommands>false</UseStandardCommands>
+                </Properties>
+            </Form>
+        </ChildObjects>
+    </ExternalDataProcessor>
+</MetaDataObject>
