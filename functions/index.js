@@ -194,6 +194,37 @@ exports.importBasData = functions.https.onCall(async (data, context) => {
     }
   }
 
+  // --- NEW: Sync Departments ---
+  const uniqueDepartments = new Set();
+  employees.forEach(employee => {
+    const depName = sanitizeString(employee.department || employee.departmentName);
+    if (depName) {
+      uniqueDepartments.add(depName);
+    }
+  });
+
+  if (uniqueDepartments.size > 0) {
+    const depList = Array.from(uniqueDepartments);
+    const depChunks = chunkArray(depList, BAS_IMPORT_CHUNK_SIZE);
+    
+    for (const chunk of depChunks) {
+      if (chunk.length === 0) continue;
+      const batch = firestore.batch();
+      chunk.forEach(depName => {
+        // Use department name as ID for simplicity and uniqueness
+        const docRef = firestore.collection('departments').doc(depName);
+        batch.set(docRef, { 
+          name: depName, 
+          updatedAt: FieldValue.serverTimestamp() 
+        }, { merge: true });
+      });
+      
+      if (!dryRun) {
+        await batch.commit();
+      }
+    }
+  }
+
   let vacationsWritten = 0;
   for (const chunk of vacationChunks) {
     if (chunk.length === 0) {
