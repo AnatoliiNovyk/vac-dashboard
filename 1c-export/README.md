@@ -1,106 +1,36 @@
-# Інструкція з використання обробки експорту для Vacation Dashboard
+# 1C External Data Processor for Vacation Dashboard
+## "Экспорт данных для Vacation Dashboard"
 
-## Опис
+This external data processor (.epf) allows you to export employee data from BAS / 1C:Enterprise (ZUP 3.0 configuration) into a CSV format compatible with the Vacation Dashboard.
 
-Зовнішня обробка для 1С:Зарплата і управління персоналом 3.0, яка експортує дані співробітників у CSV-файл для імпорту в Vacation Dashboard.
+### Features
+*   **Exports Employee Data**: Tax ID, Name, Department, Position.
+*   **Manager Hierarchy**: Automatically links employees to their managers based on "Прием на работу" and "Кадровый перевод" documents.
+*   **Vacation Balances**: Calculates remaining vacation days:
+    *   *Entitlement*: Defaults to 24 days (standard).
+    *   *Usage*: Queries `AccumulationRegister.ФактическиеОтпуска` to deduct used days.
+    *   *Balance*: 24 - Used Days.
+    *   *Fallback*: If the register is missing, defaults to 24 days.
+*   **Role assignment**: Automatically flags HRs and Managers based on department/position names.
 
-## Файли
+### Installation & Usage
 
-- `ЭкспортДляVacationDashboard_МодульОбъекта.bsl` - вихідний код модуля обробки
-- `ЭкспортДляVacationDashboard.xml` - XML-метадані обробки
+1.  **Open 1C:Enterprise** in user mode.
+2.  Go to **File** -> **Open** (Файл -> Открыть).
+3.  Select the `ЕкспортДляVacationDashboard.epf` file (compiled from the source) or the source folder if you are using the raw files loader.
+    *   *Note: Since you have the source code (`.bsl`/`.xml`), you typically need to open this in the **Configurator** first to save it as an `.epf` file: File -> New -> External Data Processor -> Paste logic -> Save as .epf*.
+    *   *Alternatively, if you have the `.epf` provided directly, just open it.*
+4.  **Processor Interface**:
+    *   **Организация (Organization)**: Select the organization to export.
+    *   **Дата выгрузки (Export Date)**: Select the date (usually current date).
+5.  Click **"Выполнить экспорт" (Execute Export)**.
+6.  Choose a destination to save the `.csv` file (e.g., `employees_export_2024-05-20.csv`).
+7.  **Upload** the resulting CSV file to the Vacation Dashboard interface.
 
-## Створення обробки в 1С
+### Troubleshooting
+*   **"Поле объекта не обнаружено (КодПоДРФО)"**: Ensure you are running on a configuration that supports Ukrainian Tax IDs (BAS ZUP). The code checks `ФизическоеЛицо.КодПоДРФО`.
+*   **Vacation Balance showing 24**: If checking `ФактическиеОтпуска` fails or is empty, the system defaults to 24. Check the "User Log" (Лог) on the form for specific warnings.
 
-### Спосіб 1: Через Конфігуратор
-
-1. Відкрийте 1С в режимі **Конфігуратор**
-2. Меню **Файл → Новый → Внешняя обработка**
-3. Встановіть ім'я: `ЭкспортДляVacationDashboard`
-4. Додайте реквізити:
-   - `Организация` (тип: СправочникСсылка.Организации)
-   - `ДатаВыгрузки` (тип: Дата)
-   - `КодировкаФайла` (тип: Строка, довжина 20)
-   - `РазделительПолей` (тип: Строка, довжина 1)
-   - `Лог` (тип: Строка, необмежена)
-5. Створіть керовану форму `ФормаОбработки`
-6. Скопіюйте код з файлу `ЭкспортДляVacationDashboard_МодульОбъекта.bsl` до модуля форми
-7. Збережіть як `ЭкспортДляVacationDashboard.epf`
-
-### Спосіб 2: Імпорт XML (якщо підтримується)
-
-1. Використайте XML-файл для імпорту структури обробки
-
-## Дизайн форми
-
-Форма повинна містити:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  Экспорт для Vacation Dashboard                             │
-├─────────────────────────────────────────────────────────────┤
-│  Организация:      [_____________________________▼]         │
-│  Дата выгрузки:    [  17.12.2025  ]                        │
-├─────────────────────────────────────────────────────────────┤
-│  [ Выполнить экспорт ]                                      │
-├─────────────────────────────────────────────────────────────┤
-│  Лог выполнения:                                            │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │ 08:15:30 - Начало экспорта для организации: ...     │    │
-│  │ 08:15:31 - Найдено сотрудников: 45                  │    │
-│  │ 08:15:32 - Экспорт успешно завершен!                │    │
-│  └─────────────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-## Використання
-
-1. Відкрийте 1С в режимі підприємства
-2. Меню **Файл → Открыть** → виберіть файл `ЭкспортДляVacationDashboard.epf`
-3. Виберіть організацію
-4. Вкажіть дату (на яку вивантажуються дані)
-5. Натисніть **Выполнить экспорт**
-6. Виберіть місце збереження CSV-файлу
-7. Імпортуйте CSV у Vacation Dashboard
-
-## Формат вихідного файлу
-
-CSV з роздільником `;` та кодуванням UTF-8:
-
-```csv
-ІПН;Прізвище;Ім'я;По_батькові;Підрозділ;Посада;Менеджер_ІПН;Нараховано_днів;Залишок_днів;is_hr;is_hr_head;is_manager
-1234567890;Іваненко;Петро;Михайлович;IT;Розробник;9876543210;24;18;false;false;false
-```
-
-## Логіка визначення ролей
-
-### HR-співробітники (`is_hr`)
-Визначаються якщо:
-- Назва підрозділу містить: "КАДР", "HR", "ПЕРСОНАЛ"
-- АБО назва посади містить: "КАДР", "HR"
-
-### Керівник HR (`is_hr_head`)
-Визначається якщо:
-- Співробітник є HR (`is_hr = true`)
-- І посада містить ключові слова керівника
-
-### Керівник (`is_manager`)
-Визначається якщо назва посади містить:
-- ДИРЕКТОР, НАЧАЛЬНИК, РУКОВОДИТЕЛЬ, МЕНЕДЖЕР
-- ЗАВЕДУЮЩ, ЗАМЕСТИТЕЛЬ
-- MANAGER, HEAD, LEAD, CHIEF
-
-## Адаптація під вашу конфігурацію
-
-Якщо у вашій конфігурації інші назви регістрів або довідників, відредагуйте запити в наступних функціях:
-
-1. **ПолучитьДанныеСотрудников** - основний запит кадрових даних
-2. **ПолучитьОстаткиОтпусков** - регістр залишків відпусток  
-3. **ПолучитьРуководителейПодразделений** - регістр керівників
-4. **ОпределитьЭтоHR** - логіка визначення HR-ролі
-5. **ОпределитьЭтоРуководитель** - логіка визначення керівника
-
-## Вимоги
-
-- 1С:Предприятие 8.3.23 або новіша
-- Конфігурація "Зарплата и управление персоналом", редакція 3.0
-- Права на читання кадрових даних
+### Developer Notes
+*   Source logic location: `ЭкспортДляVacationDashboard_МодульОбъекта.bsl`
+*   Main Logic: `ПолучитьДанныеСотрудников` iterates employees, calls `ПолучитьОстаткиОтпусков` for balances and `ПолучитьРуководителейСотрудников` for hierarchy.
