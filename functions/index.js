@@ -206,19 +206,19 @@ exports.importBasData = functions.https.onCall(async (data, context) => {
   if (uniqueDepartments.size > 0) {
     const depList = Array.from(uniqueDepartments);
     const depChunks = chunkArray(depList, BAS_IMPORT_CHUNK_SIZE);
-    
+
     for (const chunk of depChunks) {
       if (chunk.length === 0) continue;
       const batch = firestore.batch();
       chunk.forEach(depName => {
         // Use department name as ID for simplicity and uniqueness
         const docRef = firestore.collection('departments').doc(depName);
-        batch.set(docRef, { 
-          name: depName, 
-          updatedAt: FieldValue.serverTimestamp() 
+        batch.set(docRef, {
+          name: depName,
+          updatedAt: FieldValue.serverTimestamp()
         }, { merge: true });
       });
-      
+
       if (!dryRun) {
         await batch.commit();
       }
@@ -226,25 +226,83 @@ exports.importBasData = functions.https.onCall(async (data, context) => {
   }
 
   let vacationsWritten = 0;
-  for (const chunk of vacationChunks) {
-    if (chunk.length === 0) {
-      continue;
-    }
+
+  // Group vacations by employee to optimize overlap checking and batching
+  const vacationsByEmp = {};
+  vacations.forEach(v => {
+    const taxId = sanitizeString(v.employeeTaxId || v.taxId || v.employee_id);
+    if (!taxId) return;
+    if (!vacationsByEmp[taxId]) vacationsByEmp[taxId] = [];
+    vacationsByEmp[taxId].push(v);
+  });
+
+  const empIds = Object.keys(vacationsByEmp);
+  // Process 10 employees at a time to stay within Firestore 'in' query limits (30 is max, 10 is safe)
+  const empBatches = chunkArray(empIds, 10);
+
+  for (const batchIds of empBatches) {
+    if (batchIds.length === 0) continue;
+
     const batch = firestore.batch();
-    chunk.forEach((vacation) => {
-      const mapped = mapVacationForFirestore(vacation);
-      const taxId = sanitizeString(mapped.employee_id);
-      const startDate = sanitizeString(mapped.start_date);
-      const endDate = sanitizeString(mapped.end_date);
-      if (!taxId || !startDate || !endDate) {
-        return;
+    const idsToDelete = new Set();
+    const idsToSet = new Set();
+
+    // Fetch existing vacations for these employees to check overlap
+    let existingVacations = [];
+    try {
+      const query = firestore.collection('vacation_periods').where('employee_id', 'in', batchIds);
+      const snap = await query.get();
+      existingVacations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+      console.error('Error fetching existing vacations for overlap check:', e);
+    }
+
+    for (const taxId of batchIds) {
+      const incoming = vacationsByEmp[taxId] || [];
+      const existing = existingVacations.filter(v => v.employee_id === taxId);
+
+      incoming.forEach(vacation => {
+        const mapped = mapVacationForFirestore(vacation);
+        const tId = mapped.employee_id; // mapped uses 'employee_id' key
+        const sDate = mapped.start_date;
+        const eDate = mapped.end_date;
+
+        if (!tId || !sDate || !eDate) return;
+
+        const docId = buildVacationDocId(tId, sDate, eDate, mapped.type);
+
+        // Identify overlaps: StartA <= EndB && EndA >= StartB
+        // This finds conflicting vacations (e.g. 16-20 vs 17-20)
+        const overlaps = existing.filter(ex =>
+          ex.start_date <= eDate && ex.end_date >= sDate
+        );
+
+        overlaps.forEach(over => {
+          // If ID differs, it's a conflict -> Delete old one
+          // If ID matches, it's just an update of same doc -> kept by set()
+          if (over.id !== docId) {
+            idsToDelete.add(over.id);
+          }
+        });
+
+        if (!idsToSet.has(docId)) {
+          const docRef = firestore.collection('vacation_periods').doc(docId);
+          batch.set(docRef, mapped, { merge: true });
+          idsToSet.add(docId);
+          vacationsWritten++;
+        }
+      });
+    }
+
+    // Apply deletes for conflicts
+    idsToDelete.forEach(id => {
+      // Safety: Don't delete if we are also setting it (though ID check above handles this)
+      if (!idsToSet.has(id)) {
+        batch.delete(firestore.collection('vacation_periods').doc(id));
       }
-      const docId = buildVacationDocId(taxId, startDate, endDate, mapped.type);
-      const docRef = firestore.collection('vacation_periods').doc(docId);
-      batch.set(docRef, mapped, { merge: true });
-      vacationsWritten += 1;
     });
-    if (!dryRun && chunk.length > 0) {
+
+    if (!dryRun) {
       await batch.commit();
     }
   }
