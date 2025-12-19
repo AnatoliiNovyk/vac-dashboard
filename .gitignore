@@ -1,5 +1,6 @@
 # Firebase service account key
 serviceAccountKey.json
+*-firebase-adminsdk-*.json
 
 # Firebase project configuration
 firebase-config.js
