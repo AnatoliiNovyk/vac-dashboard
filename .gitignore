@@ -17,3 +17,7 @@ firestore-debug.log
 functions/firestore-debug.log
 
 logs/vsce-debug.log
+
+1c-export/BASHRM_3_0_5_6_cf.cf
+
+.firebase/
