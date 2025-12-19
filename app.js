@@ -2090,6 +2090,18 @@
 		return "Не вдалося зберегти зміни. Спробуйте ще раз.";
 	}
 
+	async function buildFrontendVacationDocId(taxId, start, end, type) {
+		const rawType = normalizeText(type) || "Відпустка";
+		const input = [taxId, start, end, rawType].join("|");
+		const encoder = new TextEncoder();
+		const data = encoder.encode(input);
+		// Use window.crypto.subtle for SHA-1 (available in secure contexts)
+		const hashBuffer = await window.crypto.subtle.digest("SHA-1", data);
+		const hashArray = Array.from(new Uint8Array(hashBuffer));
+		const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+		return hashHex;
+	}
+
 	async function commitModalChanges() {
 		const employee = getEmployeeById(modalState.employeeId) || modalState.employeeSnapshot;
 		if (!employee) {
@@ -2101,8 +2113,21 @@
 		const batch = db.batch();
 		const persistedIds = new Set();
 
-		modalState.periods.forEach(period => {
-			const docRef = period.refId ? collectionRef.doc(period.refId) : collectionRef.doc();
+		// Use for...of loop to support await
+		for (const period of modalState.periods) {
+			// GENERATE DETERMINISTIC ID
+			// This matches 1C import logic: hash(taxId|start|end|type)
+			// This prevents duplicates if user adds same period again, or if import overwrites it.
+			// It also handles "Renaming" (Date Change) correctly: New Date -> New ID -> Old ID Deleted.
+			const computedId = await buildFrontendVacationDocId(
+				modalState.employeeId,
+				period.startDate,
+				period.endDate,
+				"Відпустка" // Default type to match backend
+			);
+
+			const docRef = collectionRef.doc(computedId);
+
 			const payload = {
 				start_date: period.startDate,
 				end_date: period.endDate,
@@ -2112,18 +2137,24 @@
 				updatedAt: now,
 				updatedBy: user?.id || null,
 				updatedByName: user?.fullName || user?.name || "",
-				lastAction: "manual_periods_update"
+				lastAction: "manual_periods_update",
+				type: "Відпустка" // Enforce type
 			};
-			batch.set(docRef, { ...payload, id: docRef.id }, { merge: true });
-			persistedIds.add(docRef.id);
-			if (!period.refId) {
-				period.refId = docRef.id;
-				period.id = docRef.id;
+
+			// Use merge: true to preserve other fields (like 'bas' metadata if existing)
+			batch.set(docRef, { ...payload, id: computedId }, { merge: true });
+			persistedIds.add(computedId);
+
+			// Update local period state to point to new ID
+			if (period.refId !== computedId) {
+				period.refId = computedId;
+				period.id = computedId;
 			}
-		});
+		}
 
 		modalState.originalPeriods.forEach(original => {
 			const docId = original.refId || original.id;
+			// If an original vacation (e.g. OLD dates) is not in the new persisted list (NEW dates), DELETE it.
 			if (docId && !persistedIds.has(docId)) {
 				batch.delete(collectionRef.doc(docId));
 			}
@@ -2471,6 +2502,11 @@
 	}
 
 	function getEmployeeBalance(employee) {
+		// Prioritize authoritative balance (e.g. from Trigger or 1C)
+		if (typeof employee?.allocation?.balanceDays === "number" && Number.isFinite(employee.allocation.balanceDays)) {
+			return employee.allocation.balanceDays;
+		}
+
 		const accrued = getEmployeeAccruedDays(employee);
 		if (typeof accrued === "number") {
 			const used = typeof employee?.used_vacation_days === "number" && Number.isFinite(employee.used_vacation_days)

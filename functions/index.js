@@ -258,12 +258,16 @@ exports.importBasData = functions.https.onCall(async (data, context) => {
     }
 
     for (const taxId of batchIds) {
-      const incoming = vacationsByEmp[taxId] || [];
+      const incomingRaw = vacationsByEmp[taxId] || [];
       const existing = existingVacations.filter(v => v.employee_id === taxId);
 
-      incoming.forEach(vacation => {
+      // 1. Resolve INTERNAL overlaps within the incoming batch
+      // Strategy: Last Write Wins (latest record in the list supersedes previous ones)
+      const acceptedWrites = []; // List of { mapped, docId }
+
+      incomingRaw.forEach(vacation => {
         const mapped = mapVacationForFirestore(vacation);
-        const tId = mapped.employee_id; // mapped uses 'employee_id' key
+        const tId = mapped.employee_id;
         const sDate = mapped.start_date;
         const eDate = mapped.end_date;
 
@@ -271,15 +275,46 @@ exports.importBasData = functions.https.onCall(async (data, context) => {
 
         const docId = buildVacationDocId(tId, sDate, eDate, mapped.type);
 
-        // Identify overlaps: StartA <= EndB && EndA >= StartB
-        // This finds conflicting vacations (e.g. 16-20 vs 17-20)
+        // Remove any previously accepted write that overlaps with this new one
+        // (This handles duplicates and conflicting periods in the same payload)
+        // Overlap: StartA <= EndB && EndA >= StartB
+        const nonConflicting = acceptedWrites.filter(prev => {
+          const prevStart = prev.mapped.start_date;
+          const prevEnd = prev.mapped.end_date;
+          const isOverlapping = prevStart <= eDate && prevEnd >= sDate;
+
+          if (isOverlapping) {
+            // If we found a conflict, we DROP the old one (prev) because 'vacation' (current) is newer/correction
+            return false;
+          }
+          return true;
+        });
+
+        // Update the accepted list
+        nonConflicting.push({ mapped, docId });
+
+        // Replace the array contents in place or reassign (since we're in a loop, reassigning works for the local variable if properly scoped, 
+        // but here we are updating the separate 'acceptedWrites' list)
+        // Wait, 'acceptedWrites' is the accumulator. 
+        // We need to reset it.
+        acceptedWrites.length = 0;
+        acceptedWrites.push(...nonConflicting);
+      });
+
+      // 2. Process the Resolved Writes against Database
+      acceptedWrites.forEach(item => {
+        const { mapped, docId } = item;
+        const sDate = mapped.start_date;
+        const eDate = mapped.end_date;
+
+        // Identify overlaps with EXISTING (DB) records
         const overlaps = existing.filter(ex =>
           ex.start_date <= eDate && ex.end_date >= sDate
         );
 
         overlaps.forEach(over => {
           // If ID differs, it's a conflict -> Delete old one
-          // If ID matches, it's just an update of same doc -> kept by set()
+          // If ID matches, it's the same doc -> kept (merge update)
           if (over.id !== docId) {
             idsToDelete.add(over.id);
           }
@@ -627,6 +662,51 @@ exports.getManagerTeam = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('internal', error.message);
   }
 });
+
+/**
+ * Automatically update employee's vacation balance when a vacation is manually added/updated/removed.
+ * IGNORES changes sourced from 'import' to avoid conflicts with 1C synchronization.
+ */
+exports.updateVacationBalance = functions.firestore
+  .document('vacation_periods/{vacationId}')
+  .onWrite(async (change, context) => {
+    const before = change.before.exists ? change.before.data() : {};
+    const after = change.after.exists ? change.after.data() : {};
+
+    // 1. Skip if this change is coming from the BAS Import process
+    // We check 'bas.source' field. If either state identifies as 'import', we assume it's an import sync operation.
+    // The import process sets the authoritative balance directly on the Employee record, so we shouldn't modify it.
+    if (before.bas?.source === 'import' || after.bas?.source === 'import') {
+      console.log(`[updateVacationBalance] Skipping import-sourced change for ${change.after.id || change.before.id}`);
+      return null;
+    }
+
+    const employeeId = after.employee_id || before.employee_id;
+    if (!employeeId) return null;
+
+    // 2. Calculate the difference in days
+    // If doc was created: before.days = 0/undefined
+    // If doc was deleted: after.days = 0/undefined
+    const daysBefore = Number(before.days) || 0;
+    const daysAfter = Number(after.days) || 0;
+    const delta = daysAfter - daysBefore;
+
+    if (delta === 0) return null;
+
+    console.log(`[updateVacationBalance] Adjusting balance for ${employeeId} by ${-delta} days (Vacation Change: ${delta})`);
+
+    try {
+      const firestore = admin.firestore();
+      // If days were ADDED (delta > 0), Balance should DECREASE (-delta)
+      // If days were REMOVED (delta < 0), Balance should INCREASE (-(-val) = +val)
+      await firestore.collection('employees').doc(employeeId).update({
+        'allocation.balanceDays': FieldValue.increment(-delta),
+        'updatedAt': FieldValue.serverTimestamp()
+      });
+    } catch (error) {
+      console.error(`[updateVacationBalance] Failed to update balance for ${employeeId}:`, error);
+    }
+  });
 
 /**
  * Update teamTrees when an employee is changed (manager_id changes).
