@@ -22,12 +22,13 @@ export function initVacationManager(deps) {
     console.log('[vacation-manager] initVacationManager called');
     console.log('[vacation-manager] elements.vacationModalForm:', elements.vacationModalForm);
 
-    // Set up event listeners
-    if (elements.vacationModalForm) {
-        elements.vacationModalForm.addEventListener('submit', handleVacationModalSubmit);
-        console.log('[vacation-manager] Submit listener attached to form:', elements.vacationModalForm.id);
+    // Set up event listeners - using direct click on Save button instead of form submit
+    // This is more reliable and avoids ES6 module caching issues
+    if (elements.vacationModalSave) {
+        elements.vacationModalSave.addEventListener('click', handleVacationModalSubmit);
+        console.log('[vacation-manager] Click listener attached to Save button:', elements.vacationModalSave.id);
     } else {
-        console.error('[vacation-manager] ERROR: vacationModalForm is NULL! No submit listener attached.');
+        console.error('[vacation-manager] ERROR: vacationModalSave is NULL! No click listener attached.');
     }
 
     if (elements.vacationModalClose) {
@@ -40,6 +41,16 @@ export function initVacationManager(deps) {
 
     if (elements.vacationPeriodAddBtn) {
         elements.vacationPeriodAddBtn.addEventListener('click', addPeriod);
+    }
+
+    if (elements.vacationLimitInput) {
+        elements.vacationLimitInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10);
+            if (!isNaN(val)) {
+                modalState.limitDays = val;
+                modalState.isDirty = true;
+            }
+        });
     }
 
     console.log('[vacation-manager] Vacation manager module initialized');
@@ -58,6 +69,9 @@ export function openModal(employee) {
     modalState.employeeId = employee.id;
     modalState.employeeSnapshot = employee;
 
+    // Load limit from allocation or legacy field
+    modalState.limitDays = employee.allocation?.totalAllocatedDays ?? employee.total_vacation_days ?? 0;
+
     // Load existing periods
     const periods = (employee.vacationPeriods || []).map(p => ({
         id: p.id,
@@ -68,6 +82,7 @@ export function openModal(employee) {
 
     modalState.periods = periods;
     modalState.originalPeriods = JSON.parse(JSON.stringify(periods));
+    modalState.originalLimitDays = modalState.limitDays;
     modalState.isDirty = false;
     modalState.isReadOnly = false; // Determine based on user role
 
@@ -139,12 +154,12 @@ export function deletePeriod(periodId) {
 }
 
 /**
- * Handle modal form submit
- * @param {Event} event - Form submit event
+ * Handle Save button click
+ * @param {Event} event - Click event
  */
 async function handleVacationModalSubmit(event) {
     console.log('[handleVacationModalSubmit] CALLED. isDirty:', modalState.isDirty, 'isReadOnly:', modalState.isReadOnly);
-    event.preventDefault();
+    if (event) event.preventDefault();
 
     if (modalState.isReadOnly || !modalState.isDirty) {
         console.log('[handleVacationModalSubmit] EXIT EARLY - isReadOnly:', modalState.isReadOnly, 'isDirty:', modalState.isDirty);
@@ -171,16 +186,30 @@ export async function saveChanges() {
     }
 
     const batch = db.batch();
-    const collectionRef = db.collection("vacation_periods");
+    const periodsCollection = db.collection("vacation_periods");
+    const employeesCollection = db.collection("employees");
 
-    // Track IDs of periods we're keeping
+    // 1. Save / Update limit (allocation) if changed
+    if (modalState.limitDays !== modalState.originalLimitDays) {
+        console.log('[saveChanges] Updating employee limit to:', modalState.limitDays);
+        const empRef = employeesCollection.doc(modalState.employeeId);
+        batch.set(empRef, {
+            allocation: {
+                totalAllocatedDays: modalState.limitDays,
+                updatedAt: new Date()
+            },
+            total_vacation_days: modalState.limitDays // Legacy support
+        }, { merge: true });
+    }
+
+    // 2. Track IDs of periods we're keeping
     const currentPeriodIds = new Set();
 
-    // Save each period
+    // 3. Save each period
     modalState.periods.forEach(period => {
         const docRef = period.refId
-            ? collectionRef.doc(period.refId)
-            : collectionRef.doc();
+            ? periodsCollection.doc(period.refId)
+            : periodsCollection.doc();
 
         const payload = {
             employee_id: modalState.employeeId,
@@ -192,18 +221,17 @@ export async function saveChanges() {
 
         batch.set(docRef, payload, { merge: true });
 
-        // Track the ID (either existing refId or newly created docRef.id)
         if (period.refId) {
             currentPeriodIds.add(period.refId);
         }
     });
 
-    // DELETE periods that were removed (exist in original but not in current)
+    // 4. DELETE periods that were removed
     modalState.originalPeriods.forEach(original => {
         const docId = original.refId || original.id;
         if (docId && !docId.startsWith('temp-') && !currentPeriodIds.has(docId)) {
             console.log('[saveChanges] DELETING removed period:', docId);
-            batch.delete(collectionRef.doc(docId));
+            batch.delete(periodsCollection.doc(docId));
         }
     });
 
@@ -211,15 +239,22 @@ export async function saveChanges() {
 
     modalState.isDirty = false;
     modalState.originalPeriods = JSON.parse(JSON.stringify(modalState.periods));
+    modalState.originalLimitDays = modalState.limitDays;
 }
 
 /**
  * Render modal content
  */
 function renderModalContent() {
+    const employee = modalState.employeeSnapshot;
+
     if (elements.vacationModalEmployeeName) {
-        const employee = modalState.employeeSnapshot;
         elements.vacationModalEmployeeName.textContent = employee?.fullName || employee?.name || "—";
+    }
+
+    // Set limit input value
+    if (elements.vacationLimitInput) {
+        elements.vacationLimitInput.value = modalState.limitDays;
     }
 
     renderModalPeriods();

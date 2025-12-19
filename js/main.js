@@ -59,6 +59,7 @@ const elements = {
     vacationModalEmployeeName: document.getElementById("vacation-manager-employee-name"),
     vacationPeriodList: document.getElementById("vacation-period-list"),
     vacationPeriodAddBtn: document.getElementById("vacation-period-add"),
+    vacationLimitInput: document.getElementById("vacation-limit-input"),
     vacationModalSave: document.getElementById("vacation-modal-save"),
     basImportBtn: document.getElementById("bas-import-button"),
     basExportBtn: document.getElementById("bas-export-button"),
