@@ -1558,7 +1558,13 @@
 	}
 
 	function updateModalLimitInfo(employee) {
-		const usedDays = Number(employee?.used_vacation_days || 0);
+		// Prioritize allocation.balanceDays for usedDays calculation so the Modal matches the Dashboard
+		const allocTotal = Number(employee?.allocation?.totalAllocatedDays);
+		const allocBal = Number(employee?.allocation?.balanceDays);
+		const usedDays = (Number.isFinite(allocTotal) && Number.isFinite(allocBal))
+			? (allocTotal - allocBal)
+			: Number(employee?.used_vacation_days || 0);
+
 		const limitValue = Number.isFinite(modalState.limitDays) ? modalState.limitDays : 0;
 		const remaining = limitValue > 0 ? Math.max(limitValue - modalState.totalDays, 0) : 0;
 		const manualNote = modalState.manualLimitOverride || employee?.allocation?.manualOverride
