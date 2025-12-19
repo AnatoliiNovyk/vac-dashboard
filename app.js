@@ -2158,11 +2158,21 @@
 			}
 		}
 
+		// DEBUG: Log original periods to see what IDs we have
+		console.log('[commitModalChanges] originalPeriods:', JSON.stringify(modalState.originalPeriods, null, 2));
+		console.log('[commitModalChanges] persistedIds:', [...persistedIds]);
+
 		modalState.originalPeriods.forEach(original => {
 			const docId = original.refId || original.id;
+			console.log('[commitModalChanges] Checking original:', { refId: original.refId, id: original.id, resolved: docId });
 			// If an original vacation (e.g. OLD dates) is not in the new persisted list (NEW dates), DELETE it.
 			if (docId && !persistedIds.has(docId)) {
+				console.log('[commitModalChanges] DELETING docId:', docId);
 				batch.delete(collectionRef.doc(docId));
+			} else if (!docId) {
+				console.warn('[commitModalChanges] SKIP DELETE - docId is empty/null for original:', original);
+			} else {
+				console.log('[commitModalChanges] KEEP (in persistedIds):', docId);
 			}
 		});
 
@@ -2194,17 +2204,27 @@
 	}
 
 	async function handleVacationModalSubmit(event) {
+		console.log('[handleVacationModalSubmit] CALLED');
+		console.log('[handleVacationModalSubmit] modalState.isReadOnly:', modalState.isReadOnly);
+		console.log('[handleVacationModalSubmit] modalState.isDirty:', modalState.isDirty);
+		console.log('[handleVacationModalSubmit] modalState.errors.size:', modalState.errors.size);
+		console.log('[handleVacationModalSubmit] modalState.periods.length:', modalState.periods.length);
+		console.log('[handleVacationModalSubmit] modalState.originalPeriods.length:', modalState.originalPeriods.length);
+
 		if (event) {
 			event.preventDefault();
 		}
 		if (modalState.isReadOnly) {
+			console.log('[handleVacationModalSubmit] EXIT: isReadOnly');
 			closeVacationManagerModal();
 			return;
 		}
 		calculateModalState();
+		console.log('[handleVacationModalSubmit] After calculateModalState - isDirty:', modalState.isDirty, 'errors.size:', modalState.errors.size);
 		renderModalWarnings();
 		updateModalSaveState();
 		if (modalState.errors.size > 0) {
+			console.log('[handleVacationModalSubmit] EXIT: has errors');
 			scrollModalToFirstError();
 			return;
 		}
@@ -2230,9 +2250,11 @@
 			}
 		}
 		if (!modalState.isDirty) {
+			console.log('[handleVacationModalSubmit] EXIT: isDirty is FALSE - closing without save');
 			closeVacationManagerModal();
 			return;
 		}
+		console.log('[handleVacationModalSubmit] PROCEEDING TO SAVE - isDirty is TRUE');
 		const saveButton = elements.vacationModalSave || null;
 		if (saveButton && saveButton.dataset.lockedByClaims === "true") {
 			if (elements.vacationModalError) {

@@ -19,9 +19,15 @@ export function initVacationManager(deps) {
     db = deps.db;
     elements = deps.elements;
 
+    console.log('[vacation-manager] initVacationManager called');
+    console.log('[vacation-manager] elements.vacationModalForm:', elements.vacationModalForm);
+
     // Set up event listeners
     if (elements.vacationModalForm) {
         elements.vacationModalForm.addEventListener('submit', handleVacationModalSubmit);
+        console.log('[vacation-manager] Submit listener attached to form:', elements.vacationModalForm.id);
+    } else {
+        console.error('[vacation-manager] ERROR: vacationModalForm is NULL! No submit listener attached.');
     }
 
     if (elements.vacationModalClose) {
@@ -137,14 +143,18 @@ export function deletePeriod(periodId) {
  * @param {Event} event - Form submit event
  */
 async function handleVacationModalSubmit(event) {
+    console.log('[handleVacationModalSubmit] CALLED. isDirty:', modalState.isDirty, 'isReadOnly:', modalState.isReadOnly);
     event.preventDefault();
 
     if (modalState.isReadOnly || !modalState.isDirty) {
+        console.log('[handleVacationModalSubmit] EXIT EARLY - isReadOnly:', modalState.isReadOnly, 'isDirty:', modalState.isDirty);
         return;
     }
 
     try {
+        console.log('[handleVacationModalSubmit] Calling saveChanges()...');
         await saveChanges();
+        console.log('[handleVacationModalSubmit] saveChanges() completed successfully');
         closeModal(true);
     } catch (error) {
         console.error("Error saving vacation periods:", error);
@@ -163,6 +173,9 @@ export async function saveChanges() {
     const batch = db.batch();
     const collectionRef = db.collection("vacation_periods");
 
+    // Track IDs of periods we're keeping
+    const currentPeriodIds = new Set();
+
     // Save each period
     modalState.periods.forEach(period => {
         const docRef = period.refId
@@ -178,6 +191,20 @@ export async function saveChanges() {
         };
 
         batch.set(docRef, payload, { merge: true });
+
+        // Track the ID (either existing refId or newly created docRef.id)
+        if (period.refId) {
+            currentPeriodIds.add(period.refId);
+        }
+    });
+
+    // DELETE periods that were removed (exist in original but not in current)
+    modalState.originalPeriods.forEach(original => {
+        const docId = original.refId || original.id;
+        if (docId && !docId.startsWith('temp-') && !currentPeriodIds.has(docId)) {
+            console.log('[saveChanges] DELETING removed period:', docId);
+            batch.delete(collectionRef.doc(docId));
+        }
     });
 
     await batch.commit();
