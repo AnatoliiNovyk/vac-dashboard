@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <!-- Background rounded rectangle -->
+  <rect x="2" y="2" width="196" height="56" rx="8" fill="#21808D" stroke="#2DA6B2" stroke-width="2"/>
+  
+  <!-- EGIS text -->
+  <text x="100" y="30" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FCFCF9" text-anchor="middle" dominant-baseline="middle">EGIS</text>
+  
+  <!-- UKRAINA text -->
+  <text x="100" y="48" font-family="Arial, sans-serif" font-size="10" font-weight="500" fill="#32B8C6" text-anchor="middle" dominant-baseline="middle">UKRAINA</text>
+  
+  <!-- Decorative element - abstract vacation/calendar icon -->
+  <g transform="translate(15, 15)">
+    <rect x="0" y="4" width="16" height="16" rx="2" fill="none" stroke="#32B8C6" stroke-width="1.5"/>
+    <line x1="0" y1="8" x2="16" y2="8" stroke="#32B8C6" stroke-width="1.5"/>
+    <circle cx="4.5" cy="12" r="1" fill="#FCFCF9"/>
+    <circle cx="8" cy="12" r="1" fill="#FCFCF9"/>
+    <circle cx="11.5" cy="12" r="1" fill="#FCFCF9"/>
+    <circle cx="4.5" cy="16" r="1" fill="#FCFCF9"/>
+    <circle cx="8" cy="16" r="1" fill="#FCFCF9"/>
+  </g>
+</svg>
