@@ -81,6 +81,34 @@ export function computeDays(start, end) {
 }
 
 /**
+ * Compute number of used days between start and today (inclusive)
+ * Based on rule: future vacations not subtracted, current only until today.
+ * @param {string} start - Start date (YYYY-MM-DD)
+ * @param {string} end - End date (YYYY-MM-DD)
+ * @returns {number} Used days
+ */
+export function computeUsedDaysToDate(start, end) {
+    if (!start || !end) return 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0];
+
+    // 1. Future vacation: not subtracted
+    if (start > todayStr) {
+        return 0;
+    }
+
+    // 2. Past vacation: fully subtracted
+    if (end < todayStr) {
+        return computeDays(start, end);
+    }
+
+    // 3. Current vacation: only part until today
+    return computeDays(start, todayStr);
+}
+
+/**
  * Parse ISO date string to UTC Date
  * @param {string} iso - ISO date string (YYYY-MM-DD)
  * @returns {Date|null}

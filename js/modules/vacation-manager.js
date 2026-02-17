@@ -5,7 +5,7 @@
 
 import { modalState, resetModalState } from '../core/state.js';
 import { toggleHidden, createElement, clearNode } from '../utils/dom.js';
-import { formatDate, computeDays } from '../utils/formatters.js';
+import { formatDate, computeDays, computeUsedDaysToDate } from '../utils/formatters.js';
 import { validatePeriodDates } from '../utils/validation.js';
 
 let elements = {};
@@ -189,23 +189,41 @@ export async function saveChanges() {
     const periodsCollection = db.collection("vacation_periods");
     const employeesCollection = db.collection("employees");
 
-    // 1. Save / Update limit (allocation) if changed
-    if (modalState.limitDays !== modalState.originalLimitDays) {
-        console.log('[saveChanges] Updating employee limit to:', modalState.limitDays);
-        const empRef = employeesCollection.doc(modalState.employeeId);
-        batch.set(empRef, {
-            allocation: {
-                totalAllocatedDays: modalState.limitDays,
-                updatedAt: new Date()
-            },
-            total_vacation_days: modalState.limitDays // Legacy support
-        }, { merge: true });
-    }
+    // 2. Calculate total used days from current periods (only past/current as per TZ)
+    let usedDaysToDate = 0;
+    modalState.periods.forEach(period => {
+        usedDaysToDate += computeUsedDaysToDate(period.startDate, period.endDate);
+    });
 
-    // 2. Track IDs of periods we're keeping
+    const newBalance = modalState.limitDays - usedDaysToDate;
+
+    console.log('[saveChanges] Recalculating balance:', {
+        limit: modalState.limitDays,
+        usedToDate: usedDaysToDate,
+        newBalance: newBalance
+    });
+
+    // 3. Always update employee document to ensure balance is sync'd
+    const empRef = employeesCollection.doc(modalState.employeeId);
+
+    console.log('[saveChanges] Finalizing update for employee:', modalState.employeeId, {
+        limit: modalState.limitDays,
+        usedToDate: usedDaysToDate,
+        newBalance: newBalance
+    });
+
+    batch.set(empRef, {
+        allocation: {
+            totalAllocatedDays: modalState.limitDays,
+            balanceDays: newBalance,
+            updatedAt: new Date()
+        }
+    }, { merge: true });
+
+    // 4. Track IDs of periods we're keeping
     const currentPeriodIds = new Set();
 
-    // 3. Save each period
+    // 5. Save each period
     modalState.periods.forEach(period => {
         const docRef = period.refId
             ? periodsCollection.doc(period.refId)
@@ -221,7 +239,9 @@ export async function saveChanges() {
 
         batch.set(docRef, payload, { merge: true });
 
-        if (period.refId) {
+        if (period.id && !period.id.startsWith('temp-')) {
+            currentPeriodIds.add(period.id);
+        } else if (period.refId) {
             currentPeriodIds.add(period.refId);
         }
     });

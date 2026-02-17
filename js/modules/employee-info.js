@@ -4,8 +4,7 @@
  */
 
 import { createElement, toggleHidden, clearNode } from '../utils/dom.js';
-import { formatRange } from '../utils/formatters.js';
-import { createStatusBadge } from '../utils/formatters.js';
+import { formatRange, createStatusBadge, computeUsedDaysToDate } from '../utils/formatters.js';
 
 let infoModalState = {
     employeeId: null
@@ -186,18 +185,19 @@ function getEmployeeAccruedDays(employee) {
  */
 function getEmployeeBalance(employee) {
     const accrued = getEmployeeAccruedDays(employee);
-    if (typeof accrued === "number") {
-        const used = typeof employee?.used_vacation_days === "number" &&
-            Number.isFinite(employee.used_vacation_days)
-            ? employee.used_vacation_days
-            : 0;
-        const balance = accrued - used;
-        if (Number.isFinite(balance)) {
-            return balance;
-        }
+    if (typeof accrued !== "number") {
+        return null;
     }
-    const fallback = employee?.raw?.days_left;
-    return typeof fallback === "number" && Number.isFinite(fallback) ? fallback : null;
+
+    // Calculate used days strictly by TZ: only past days and current partial days
+    let usedToDate = 0;
+    if (employee.vacationPeriods && Array.isArray(employee.vacationPeriods)) {
+        employee.vacationPeriods.forEach(period => {
+            usedToDate += computeUsedDaysToDate(period.start_date, period.end_date);
+        });
+    }
+
+    return accrued - usedToDate;
 }
 
 /**
